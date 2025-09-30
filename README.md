@@ -33,7 +33,7 @@ This platform provides a complete customer support solution for businesses with:
 
 **Fully Automated Deployment**: When you run `terraform apply`, this infrastructure automatically provisions:
 
-- ✅ **AI Customer Support**: Dialogflow CX with phone and chat integration
+- ✅ **AI Customer Support**: Gemini 2.5 Flash with phone and chat integration
 - ✅ **CRM System**: SuiteCRM with PostgreSQL database (`crm.yourdomain.com`)
 - ✅ **Load Balancing**: Subdomain routing for seamless service access
 - ✅ **SSL Security**: Automatic certificate management for custom domains
@@ -457,7 +457,7 @@ context.messages.push({
 });
 ```
 
-**3. Dialogflow Processing**
+**3. Gemini 2.5 Flash Processing**
 - Natural language understanding
 - Intent detection and entity extraction
 - Context-aware responses
@@ -494,7 +494,7 @@ const customerData = await suiteCRM.lookup({
 });
 
 // Enhance AI response with customer context
-const personalizedResponse = await dialogflowCX.generateResponse({
+const personalizedResponse = await geminiFlash.generateResponse({
   message,
   context: {
     customerName: customerData.first_name,
