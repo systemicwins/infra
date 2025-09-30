@@ -15,3 +15,14 @@ openai_api_key = "your-openai-api-key"
 # SuiteCRM Configuration
 suitecrm_db_password = "your-secure-db-password"
 suitecrm_admin_password = "your-admin-password"
+
+# Gmail API Configuration (for email support)
+gmail_client_id = "your-gmail-client-id"
+gmail_client_secret = "your-gmail-client-secret"
+gmail_refresh_token = "your-gmail-refresh-token"
+
+# Note: To enable email support, you need to:
+# 1. Set up a Gmail API project in Google Cloud Console
+# 2. Create OAuth 2.0 credentials
+# 3. Configure OAuth consent screen
+# 4. Generate refresh token for service account access

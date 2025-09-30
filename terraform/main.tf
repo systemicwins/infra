@@ -33,7 +33,8 @@ resource "google_project_service" "required_apis" {
     "contactcenterinsights.googleapis.com",
     "sql-component.googleapis.com",
     "sqladmin.googleapis.com",
-    "certificatemanager.googleapis.com"
+    "certificatemanager.googleapis.com",
+    "gmail.googleapis.com"
   ])
 
   service = each.key
@@ -312,6 +313,27 @@ resource "google_secret_manager_secret" "suitecrm_admin_password" {
   }
 }
 
+resource "google_secret_manager_secret" "gmail_client_id" {
+  secret_id = "${var.environment}-gmail-client-id"
+  replication {
+    auto {}
+  }
+}
+
+resource "google_secret_manager_secret" "gmail_client_secret" {
+  secret_id = "${var.environment}-gmail-client-secret"
+  replication {
+    auto {}
+  }
+}
+
+resource "google_secret_manager_secret" "gmail_refresh_token" {
+  secret_id = "${var.environment}-gmail-refresh-token"
+  replication {
+    auto {}
+  }
+}
+
 resource "google_secret_manager_secret_version" "openai_api_key" {
   secret      = google_secret_manager_secret.openai_api_key.name
   secret_data = var.openai_api_key
@@ -330,6 +352,21 @@ resource "google_secret_manager_secret_version" "suitecrm_db_password" {
 resource "google_secret_manager_secret_version" "suitecrm_admin_password" {
   secret      = google_secret_manager_secret.suitecrm_admin_password.name
   secret_data = var.suitecrm_admin_password
+}
+
+resource "google_secret_manager_secret_version" "gmail_client_id" {
+  secret      = google_secret_manager_secret.gmail_client_id.name
+  secret_data = var.gmail_client_id
+}
+
+resource "google_secret_manager_secret_version" "gmail_client_secret" {
+  secret      = google_secret_manager_secret.gmail_client_secret.name
+  secret_data = var.gmail_client_secret
+}
+
+resource "google_secret_manager_secret_version" "gmail_refresh_token" {
+  secret      = google_secret_manager_secret.gmail_refresh_token.name
+  secret_data = var.gmail_refresh_token
 }
 
 # IAM for Secret Manager access
@@ -351,10 +388,41 @@ resource "google_secret_manager_secret_iam_member" "suitecrm_secret_accessor" {
   member    = "serviceAccount:${google_service_account.cloud_run_sa.email}"
 }
 
+resource "google_secret_manager_secret_iam_member" "gmail_secret_accessor" {
+  secret_id = google_secret_manager_secret.gmail_client_id.secret_id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.cloud_run_sa.email}"
+}
+
+resource "google_secret_manager_secret_iam_member" "gmail_client_secret_accessor" {
+  secret_id = google_secret_manager_secret.gmail_client_secret.secret_id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.cloud_run_sa.email}"
+}
+
+resource "google_secret_manager_secret_iam_member" "gmail_refresh_token_accessor" {
+  secret_id = google_secret_manager_secret.gmail_refresh_token.secret_id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.cloud_run_sa.email}"
+}
+
 # Cloud SQL IAM permissions for SuiteCRM
 resource "google_project_iam_member" "suitecrm_cloud_sql" {
   project = var.project_id
   role    = "roles/cloudsql.client"
+  member  = "serviceAccount:${google_service_account.cloud_run_sa.email}"
+}
+
+# Gmail API permissions for email processing
+resource "google_project_iam_member" "gmail_api_access" {
+  project = var.project_id
+  role    = "roles/gmail.send"
+  member  = "serviceAccount:${google_service_account.cloud_run_sa.email}"
+}
+
+resource "google_project_iam_member" "gmail_readonly_access" {
+  project = var.project_id
+  role    = "roles/gmail.readonly"
   member  = "serviceAccount:${google_service_account.cloud_run_sa.email}"
 }
 

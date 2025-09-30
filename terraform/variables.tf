@@ -55,3 +55,21 @@ variable "suitecrm_admin_password" {
   type        = string
   sensitive   = true
 }
+
+variable "gmail_client_id" {
+  description = "Gmail API client ID for email integration"
+  type        = string
+  sensitive   = true
+}
+
+variable "gmail_client_secret" {
+  description = "Gmail API client secret for email integration"
+  type        = string
+  sensitive   = true
+}
+
+variable "gmail_refresh_token" {
+  description = "Gmail API refresh token for email integration"
+  type        = string
+  sensitive   = true
+}

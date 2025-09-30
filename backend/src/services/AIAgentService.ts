@@ -2,6 +2,7 @@ import { SessionsClient } from '@google-cloud/dialogflow-cx';
 import { TextToSpeechClient } from '@google-cloud/text-to-speech';
 import { SpeechToTextClient } from '@google-cloud/speech';
 import { Firestore } from '@google-cloud/firestore';
+import { gmail } from '@google-cloud/gmail';
 import { logger } from '../utils/logger.js';
 
 interface ConversationContext {
@@ -26,6 +27,7 @@ export class AIAgentService {
   private textToSpeechClient: TextToSpeechClient;
   private speechToTextClient: SpeechToTextClient;
   private firestore: Firestore;
+  private gmailClient: any;
   private projectId: string;
   private agentId: string;
   private location: string;
@@ -49,6 +51,11 @@ export class AIAgentService {
 
     // Initialize Firestore
     this.firestore = new Firestore({
+      projectId: this.projectId,
+    });
+
+    // Initialize Gmail client
+    this.gmailClient = new gmail.Gmail({
       projectId: this.projectId,
     });
 
@@ -176,6 +183,81 @@ export class AIAgentService {
     } catch (error) {
       logger.error('Error processing chat:', error);
       return "I'm sorry, I'm having trouble processing your message. Please try again.";
+    }
+  }
+
+  async processEmail(from: string, subject: string, body: string): Promise<string> {
+    try {
+      // Get or create conversation context for email
+      const sessionId = this.generateSessionId(from, 'email');
+      let context = await this.getConversationContext(sessionId);
+
+      if (!context) {
+        context = this.createNewContext(sessionId, from);
+      }
+
+      // Add email content to context
+      context.messages.push({
+        role: 'user',
+        content: `Subject: ${subject}\n\n${body}`,
+        timestamp: new Date(),
+      });
+
+      // Process with Dialogflow CX
+      const dialogflowResponse = await this.processWithDialogflow(sessionId, `Email: ${subject} - ${body}`);
+
+      // Add AI response to context
+      context.messages.push({
+        role: 'assistant',
+        content: dialogflowResponse,
+        timestamp: new Date(),
+      });
+
+      // Save updated context
+      await this.saveConversationContext(context);
+
+      return dialogflowResponse;
+
+    } catch (error) {
+      logger.error('Error processing email:', error);
+      return "Thank you for your email. I'm processing your inquiry and will respond shortly.";
+    }
+  }
+
+  async sendEmailResponse(to: string, subject: string, response: string): Promise<boolean> {
+    try {
+      // Create email message
+      const emailContent = [
+        'To: ' + to,
+        'Subject: Re: ' + subject,
+        'Content-Type: text/plain; charset=UTF-8',
+        '',
+        response,
+        '',
+        'This is an automated response from our AI customer support system.',
+        'For urgent matters, please call us directly.'
+      ].join('\r\n');
+
+      const encodedMessage = Buffer.from(emailContent)
+        .toString('base64')
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/, '');
+
+      // Send email via Gmail API
+      await this.gmailClient.users.messages.send({
+        userId: 'me',
+        requestBody: {
+          raw: encodedMessage
+        }
+      });
+
+      logger.info(`Email response sent to ${to}`);
+      return true;
+
+    } catch (error) {
+      logger.error('Error sending email response:', error);
+      return false;
     }
   }
 
