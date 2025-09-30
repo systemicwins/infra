@@ -11,3 +11,7 @@ phone_number = "+15551234567"
 
 # OpenAI Configuration (for AI customer support)
 openai_api_key = "your-openai-api-key"
+
+# SuiteCRM Configuration
+suitecrm_db_password = "your-secure-db-password"
+suitecrm_admin_password = "your-admin-password"

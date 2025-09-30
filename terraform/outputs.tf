@@ -37,3 +37,23 @@ output "support_phone_number_secret" {
   description = "Secret Manager secret containing the support phone number"
   value       = google_secret_manager_secret.support_phone_number.secret_id
 }
+
+output "suitecrm_service_url" {
+  description = "URL of the Cloud Run SuiteCRM service"
+  value       = google_cloud_run_service.suitecrm.status[0].url
+}
+
+output "load_balancer_ip_address" {
+  description = "IP address of the load balancer for custom domains"
+  value       = google_compute_global_address.default.address
+}
+
+output "cloud_sql_instance_name" {
+  description = "Name of the Cloud SQL PostgreSQL instance for SuiteCRM"
+  value       = google_sql_database_instance.suitecrm_db.name
+}
+
+output "suitecrm_database_name" {
+  description = "Name of the SuiteCRM database"
+  value       = google_sql_database.suitecrm.name
+}

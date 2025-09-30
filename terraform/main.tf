@@ -30,7 +30,10 @@ resource "google_project_service" "required_apis" {
     "texttospeech.googleapis.com",
     "dialogflow.googleapis.com",
     "contactcenterai.googleapis.com",
-    "contactcenterinsights.googleapis.com"
+    "contactcenterinsights.googleapis.com",
+    "sql-component.googleapis.com",
+    "sqladmin.googleapis.com",
+    "certificatemanager.googleapis.com"
   ])
 
   service = each.key
@@ -74,6 +77,46 @@ resource "google_firestore_database" "main" {
   type                        = "FIRESTORE_NATIVE"
   concurrency_mode           = "OPTIMISTIC"
   app_engine_integration_mode = "DISABLED"
+}
+
+# Cloud SQL PostgreSQL for SuiteCRM
+resource "google_sql_database_instance" "suitecrm_db" {
+  name             = "${var.environment}-suitecrm-postgres"
+  database_version = "POSTGRES_15"
+  region           = var.region
+
+  settings {
+    tier = "db-f1-micro"
+    disk_size = 10
+
+    database_flags {
+      name  = "max_connections"
+      value = "100"
+    }
+
+    ip_configuration {
+      ipv4_enabled = true
+      authorized_networks {
+        name  = "vpc-network"
+        value = google_compute_subnetwork.main.ip_cidr_range
+      }
+    }
+  }
+
+  deletion_protection = false  # Set to true for production
+}
+
+# SuiteCRM Database
+resource "google_sql_database" "suitecrm" {
+  name     = "suitecrm"
+  instance = google_sql_database_instance.suitecrm_db.name
+}
+
+# SuiteCRM Database User
+resource "google_sql_user" "suitecrm" {
+  name     = "suitecrm"
+  instance = google_sql_database_instance.suitecrm_db.name
+  password = var.suitecrm_db_password
 }
 
 # Storage Bucket for static assets
@@ -154,11 +197,79 @@ resource "google_cloud_run_service" "ai_agent" {
   depends_on = [google_secret_manager_secret_iam_member.ai_agent_secret_accessor]
 }
 
-# IAM policy for Cloud Run
-resource "google_cloud_run_service_iam_policy" "noauth" {
+# Cloud Run Service for SuiteCRM
+resource "google_cloud_run_service" "suitecrm" {
+  name     = "${var.environment}-suitecrm"
+  location = var.region
+
+  template {
+    spec {
+      service_account_name = google_service_account.cloud_run_sa.email
+      containers {
+        image = "gcr.io/${var.project_id}/${var.environment}-suitecrm:latest"
+        ports {
+          container_port = 80
+        }
+        env {
+          name  = "SUITECRM_DB_HOST"
+          value = google_sql_database_instance.suitecrm_db.private_ip_address
+        }
+        env {
+          name  = "SUITECRM_DB_PORT"
+          value = "5432"
+        }
+        env {
+          name  = "SUITECRM_DB_NAME"
+          value = google_sql_database.suitecrm.name
+        }
+        env {
+          name  = "SUITECRM_DB_USER"
+          value = google_sql_user.suitecrm.name
+        }
+        env {
+          name  = "SUITECRM_DB_PASSWORD"
+          value_from {
+            secret_key_ref {
+              name = google_secret_manager_secret.suitecrm_db_password.secret_id
+              key  = "latest"
+            }
+          }
+        }
+        env {
+          name  = "SUITECRM_ADMIN_PASSWORD"
+          value_from {
+            secret_key_ref {
+              name = google_secret_manager_secret.suitecrm_admin_password.secret_id
+              key  = "latest"
+            }
+          }
+        }
+      }
+    }
+  }
+
+  traffic {
+    percent         = 100
+    latest_revision = true
+  }
+
+  depends_on = [google_secret_manager_secret_iam_member.suitecrm_secret_accessor]
+}
+
+# IAM policy for AI Agent Cloud Run
+resource "google_cloud_run_service_iam_policy" "ai_agent_noauth" {
   location = google_cloud_run_service.ai_agent.location
   project  = google_cloud_run_service.ai_agent.project
   service  = google_cloud_run_service.ai_agent.name
+
+  policy_data = data.google_iam_policy.noauth.policy_data
+}
+
+# IAM policy for SuiteCRM Cloud Run
+resource "google_cloud_run_service_iam_policy" "suitecrm_noauth" {
+  location = google_cloud_run_service.suitecrm.location
+  project  = google_cloud_run_service.suitecrm.project
+  service  = google_cloud_run_service.suitecrm.name
 
   policy_data = data.google_iam_policy.noauth.policy_data
 }
@@ -187,6 +298,20 @@ resource "google_secret_manager_secret" "support_phone_number" {
   }
 }
 
+resource "google_secret_manager_secret" "suitecrm_db_password" {
+  secret_id = "${var.environment}-suitecrm-db-password"
+  replication {
+    auto {}
+  }
+}
+
+resource "google_secret_manager_secret" "suitecrm_admin_password" {
+  secret_id = "${var.environment}-suitecrm-admin-password"
+  replication {
+    auto {}
+  }
+}
+
 resource "google_secret_manager_secret_version" "openai_api_key" {
   secret      = google_secret_manager_secret.openai_api_key.name
   secret_data = var.openai_api_key
@@ -195,6 +320,16 @@ resource "google_secret_manager_secret_version" "openai_api_key" {
 resource "google_secret_manager_secret_version" "support_phone_number" {
   secret      = google_secret_manager_secret.support_phone_number.name
   secret_data = var.phone_number != null ? var.phone_number : "+15551234567"
+}
+
+resource "google_secret_manager_secret_version" "suitecrm_db_password" {
+  secret      = google_secret_manager_secret.suitecrm_db_password.name
+  secret_data = var.suitecrm_db_password
+}
+
+resource "google_secret_manager_secret_version" "suitecrm_admin_password" {
+  secret      = google_secret_manager_secret.suitecrm_admin_password.name
+  secret_data = var.suitecrm_admin_password
 }
 
 # IAM for Secret Manager access
@@ -208,6 +343,19 @@ resource "google_secret_manager_secret_iam_member" "support_phone_accessor" {
   secret_id = google_secret_manager_secret.support_phone_number.secret_id
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${google_service_account.cloud_run_sa.email}"
+}
+
+resource "google_secret_manager_secret_iam_member" "suitecrm_secret_accessor" {
+  secret_id = google_secret_manager_secret.suitecrm_db_password.secret_id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.cloud_run_sa.email}"
+}
+
+# Cloud SQL IAM permissions for SuiteCRM
+resource "google_project_iam_member" "suitecrm_cloud_sql" {
+  project = var.project_id
+  role    = "roles/cloudsql.client"
+  member  = "serviceAccount:${google_service_account.cloud_run_sa.email}"
 }
 
 # Dialogflow CX Agent for AI-powered conversations
@@ -232,6 +380,125 @@ resource "google_contact_center_insights_instance" "main" {
   depends_on = [google_project_service.required_apis]
 }
 
+# Load Balancer for subdomain routing
+resource "google_compute_global_address" "default" {
+  name = "${var.environment}-global-ip"
+}
+
+# Backend services for load balancer
+resource "google_compute_backend_service" "ai_agent_backend" {
+  name      = "${var.environment}-ai-agent-backend"
+  protocol  = "HTTP"
+
+  backend {
+    group = google_compute_region_network_endpoint_group.ai_agent_neg.id
+  }
+
+  health_checks = [google_compute_health_check.default.id]
+}
+
+resource "google_compute_backend_service" "suitecrm_backend" {
+  name      = "${var.environment}-suitecrm-backend"
+  protocol  = "HTTP"
+
+  backend {
+    group = google_compute_region_network_endpoint_group.suitecrm_neg.id
+  }
+
+  health_checks = [google_compute_health_check.default.id]
+}
+
+# Network endpoint groups for Cloud Run
+resource "google_compute_region_network_endpoint_group" "ai_agent_neg" {
+  name                  = "${var.environment}-ai-agent-neg"
+  network_endpoint_type = "SERVERLESS"
+  region                = var.region
+  cloud_run {
+    service = google_cloud_run_service.ai_agent.name
+  }
+}
+
+resource "google_compute_region_network_endpoint_group" "suitecrm_neg" {
+  name                  = "${var.environment}-suitecrm-neg"
+  network_endpoint_type = "SERVERLESS"
+  region                = var.region
+  cloud_run {
+    service = google_cloud_run_service.suitecrm.name
+  }
+}
+
+# Health check for load balancer
+resource "google_compute_health_check" "default" {
+  name = "${var.environment}-health-check"
+
+  http_health_check {
+    port = 80
+  }
+}
+
+# SSL Certificate for custom domains
+resource "google_compute_managed_ssl_certificate" "default" {
+  name = "${var.environment}-ssl-cert"
+
+  managed {
+    domains = [var.domain_name, "crm.${var.domain_name}"]
+  }
+}
+
+# URL Map for subdomain routing
+resource "google_compute_url_map" "default" {
+  name            = "${var.environment}-url-map"
+  default_service = google_compute_backend_service.ai_agent_backend.id
+
+  host_rule {
+    hosts        = ["crm.${var.domain_name}"]
+    path_matcher = "crm"
+  }
+
+  host_rule {
+    hosts        = [var.domain_name]
+    path_matcher = "main"
+  }
+
+  path_matcher {
+    name            = "crm"
+    default_service = google_compute_backend_service.suitecrm_backend.id
+  }
+
+  path_matcher {
+    name            = "main"
+    default_service = google_compute_backend_service.ai_agent_backend.id
+  }
+}
+
+# HTTP Proxy
+resource "google_compute_target_http_proxy" "default" {
+  name    = "${var.environment}-http-proxy"
+  url_map = google_compute_url_map.default.id
+}
+
+# HTTPS Proxy
+resource "google_compute_target_https_proxy" "default" {
+  name             = "${var.environment}-https-proxy"
+  url_map          = google_compute_url_map.default.id
+  ssl_certificates = [google_compute_managed_ssl_certificate.default.id]
+}
+
+# Global forwarding rules
+resource "google_compute_global_forwarding_rule" "http" {
+  name       = "${var.environment}-http-forwarding-rule"
+  target     = google_compute_target_http_proxy.default.id
+  port_range = "80"
+  ip_address = google_compute_global_address.default.address
+}
+
+resource "google_compute_global_forwarding_rule" "https" {
+  name       = "${var.environment}-https-forwarding-rule"
+  target     = google_compute_target_https_proxy.default.id
+  port_range = "443"
+  ip_address = google_compute_global_address.default.address
+}
+
 # Note: Phone number provisioning for Dialogflow CX typically requires
 # manual configuration through the Google Cloud Console or telephony partners
 # The phone number will need to be configured to point to the Dialogflow CX webhook
@@ -241,6 +508,18 @@ output "cloud_run_url" {
   value = google_cloud_run_service.ai_agent.status[0].url
 }
 
+output "suitecrm_url" {
+  value = google_cloud_run_service.suitecrm.status[0].url
+}
+
+output "load_balancer_ip" {
+  value = google_compute_global_address.default.address
+}
+
 output "storage_bucket_name" {
   value = google_storage_bucket.frontend_assets.name
+}
+
+output "cloud_sql_instance" {
+  value = google_sql_database_instance.suitecrm_db.name
 }

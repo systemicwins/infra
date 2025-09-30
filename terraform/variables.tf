@@ -43,3 +43,15 @@ variable "openai_api_key" {
   type        = string
   sensitive   = true
 }
+
+variable "suitecrm_db_password" {
+  description = "SuiteCRM database password"
+  type        = string
+  sensitive   = true
+}
+
+variable "suitecrm_admin_password" {
+  description = "SuiteCRM admin password"
+  type        = string
+  sensitive   = true
+}
