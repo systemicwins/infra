@@ -47,13 +47,161 @@ When deployed with a custom domain (e.g., `yourbusiness.com`):
 
 When acquiring a new business, **immediate access to customer data and support infrastructure** is critical for:
 
-- **📞 Personalized Support**: AI agents instantly recognize customers and provide context-aware responses
-- **🎯 Customer Retention**: Access to complete customer history prevents service disruption during transition
-- **📊 Business Intelligence**: Immediate visibility into customer base, sales pipeline, and support metrics
-- **🔄 Operational Continuity**: Existing customers continue receiving support without interruption
-- **📈 Growth Acceleration**: New customer acquisition supported by robust CRM and AI-powered engagement
+- **📞 Personalized Support**: AI agents instantly recognize customers and provide context-aware responses based on purchase history
+- **🛒 Purchase Context**: AI understands what customers have bought, when, and their preferences for better service
+- **🎯 Customer Retention**: Access to complete purchase history prevents service disruption during transition
+- **📊 Business Intelligence**: Immediate visibility into customer base, purchase patterns, and lifetime value
+- **🔄 Operational Continuity**: Existing customers continue receiving contextual support without interruption
+- **📈 Growth Acceleration**: New customer acquisition supported by AI that understands customer behavior patterns
 
-**The Problem Solved**: Traditional business acquisitions often lose 20-30% of customers due to poor transition management. This infrastructure ensures **zero-downtime customer experience** with AI-powered support that knows every customer personally.
+**The Problem Solved**: Traditional business acquisitions often lose 20-30% of customers due to poor transition management. This infrastructure ensures **zero-downtime customer experience** with AI-powered support that knows every customer personally, including their complete purchase history and preferences.
+
+**Data Migration Note**: When acquiring an existing business, simply import customer and purchase data into SuiteCRM. The AI agent will immediately have access to complete customer context for personalized support.
+
+## 📥 Customer Data Import for Business Acquisitions
+
+### Common Data Sources from Non-CRM Businesses
+
+**Digital Sources:**
+- **Spreadsheets** (Excel, Google Sheets, CSV files)
+- **Email Marketing Lists** (Mailchimp, Constant Contact exports)
+- **E-commerce Platforms** (Shopify, WooCommerce customer data)
+- **Accounting Software** (QuickBooks, Xero customer records)
+- **Point of Sale Systems** (Square, Toast transaction data)
+
+**Physical/Digital Hybrid:**
+- **Customer Address Books** (Outlook, Gmail contacts)
+- **Business Card Scanners** (digital business card collections)
+- **Paper Records** (customer lists, order forms, service tickets)
+
+**Legacy Systems:**
+- **Old Software Exports** (custom databases, legacy CRM dumps)
+- **Website Contact Forms** (database exports of form submissions)
+- **Social Media** (Facebook, LinkedIn business page contacts)
+
+### SuiteCRM Import Methods
+
+**1. CSV Import (Primary Method)**
+```bash
+# Export from source system as CSV
+# Format: customer_name,email,phone,address,purchase_history,notes
+
+# Access SuiteCRM → Import → Select Module (Contacts/Leads/Accounts)
+# Upload CSV → Map fields → Import data
+# Supports: Contacts, Leads, Accounts, Opportunities, Custom Modules
+```
+
+**2. API Integration (Automated)**
+```typescript
+// Programmatic import via SuiteCRM REST API
+const importCustomers = async (customerData) => {
+  const response = await fetch('https://crm.yourdomain.com/api/contacts', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      first_name: customerData.name,
+      email: customerData.email,
+      phone: customerData.phone,
+      // Map additional fields as needed
+    })
+  });
+  return response.json();
+};
+```
+
+**3. Data Migration Tools**
+- **CSV Import Wizard**: Built-in SuiteCRM functionality
+- **SuiteCRM Plugins**: Community extensions for enhanced imports
+- **ETL Tools**: Third-party tools for complex data transformation
+
+### Import Process for Different Business Types
+
+**Retail/E-commerce:**
+```csv
+# CSV Format Example
+customer_name,email,phone,total_purchases,last_purchase_date,preferred_products
+John Doe,john@email.com,+1234567890,5,2024-01-15,Electronics,Gaming
+```
+
+**Service Business:**
+```csv
+# CSV Format Example
+customer_name,email,phone,service_history,total_spent,last_service_date
+Jane Smith,jane@email.com,+0987654321,Plumbing Repair,450,2024-02-10
+```
+
+**SaaS/Subscription:**
+```csv
+# CSV Format Example
+customer_name,email,phone,subscription_tier,signup_date,renewal_date,usage_level
+Bob Wilson,bob@email.com,+1122334455,Premium,2023-06-01,2024-06-01,High
+```
+
+### Post-Import AI Integration
+
+**Automatic Context Building:**
+```typescript
+// After import, AI agent immediately has access
+const customerContext = await suiteCRM.lookupCustomer(phoneNumber);
+// Returns: { purchases: [...], preferences: [...], history: [...] }
+
+const personalizedResponse = await aiAgent.generate({
+  message,
+  context: customerContext,
+  businessType: "retail" // or "service" or "saas"
+});
+```
+
+### Data Quality Best Practices
+
+**Before Import:**
+- **Deduplication**: Remove duplicate customer records
+- **Standardization**: Normalize phone numbers, addresses, names
+- **Validation**: Verify email formats and required fields
+- **Categorization**: Tag customers by source, value, or type
+
+**Import Mapping:**
+```javascript
+// Field mapping configuration
+const fieldMapping = {
+  'source_name_field': 'first_name',
+  'source_email_field': 'email',
+  'source_phone_field': 'phone',
+  'source_purchase_total': 'custom_purchase_total',
+  'source_last_contact': 'last_contact_date'
+};
+```
+
+### Batch Import Strategy
+
+**For Large Datasets:**
+1. **Test Import**: Import 10-20 records first to verify mapping
+2. **Batch Processing**: Import in chunks of 500-1000 records
+3. **Error Handling**: Review and fix import errors
+4. **Validation**: Verify data integrity after import
+5. **AI Testing**: Test AI agent responses with imported data
+
+### Business Acquisition Timeline
+
+**Week 1: Assessment**
+- Inventory existing customer data sources
+- Assess data quality and completeness
+- Plan import strategy by data type
+
+**Week 2: Preparation**
+- Clean and standardize data
+- Create field mapping templates
+- Set up SuiteCRM custom fields if needed
+
+**Week 3: Import & Validation**
+- Execute batch imports
+- Verify data integrity
+- Test AI agent integration
+
+**Week 4: Optimization**
+- Fine-tune field mappings
+- Set up automated workflows
+- Train team on data management
 
 ## 🏗️ Architecture
 
@@ -62,7 +210,7 @@ When acquiring a new business, **immediate access to customer data and support i
 │   Frontend      │    │   Backend API   │    │   SuiteCRM      │    │  Google Cloud   │
 │   (Svelte)      │◄──►│   (Node.js)     │◄──►│   (PostgreSQL)  │◄──►│  Services       │
 │                 │    │                 │    │                 │    │                 │
-│ • Landing Page  │    │ • AI Agent      │    │ • Customer Data │    │ • Dialogflow CX │
+│ • Landing Page  │    │ • AI Agent      │    │ • Purchase Hist.│    │ • Dialogflow CX │
 │ • Support Form  │    │ • Phone Handler │    │ • Sales Pipeline│    │ • Firestore     │
 │ • Chat Interface│    │ • CRM Lookup    │    │ • Support Cases │    │ • Cloud Run     │
 └─────────────────┘    └─────────────────┘    └─────────────────┘    │ • Contact Center│
@@ -195,10 +343,12 @@ const personalizedResponse = await dialogflowCX.generateResponse({
 ### CRM ↔ AI Agent Integration Features
 
 - **Real-time Customer Lookup**: Phone number identification triggers instant CRM data retrieval
-- **Contextual Responses**: AI responses personalized based on customer history and preferences
-- **Automatic Ticket Creation**: Support conversations automatically create CRM cases
+- **Purchase History Access**: AI agent can access complete customer purchase/order history
+- **Contextual Responses**: AI responses personalized based on purchase patterns and preferences
+- **Automatic Ticket Creation**: Support conversations automatically create CRM cases with purchase context
 - **Conversation History Sync**: All interactions logged in both Firestore and SuiteCRM
 - **Customer Preference Tracking**: Language preferences, contact methods, and service history
+- **Vertical-Specific Data**: Custom fields for different business types (products, services, subscriptions)
 
 ### SuiteCRM Configuration
 
@@ -214,6 +364,81 @@ $sugar_config['dbconfig'] = array(
     'db_manager' => 'pg',
 );
 ```
+
+### 🔐 SuiteCRM Authentication & Access
+
+**Default Admin Account:**
+- **URL**: `https://crm.yourdomain.com`
+- **Username**: `admin`
+- **Password**: Configured via `suitecrm_admin_password` Terraform variable
+
+**Access Control Features:**
+- **User Management**: Create additional users and assign roles
+- **Role-Based Access**: Control permissions for different user types
+- **Password Policies**: Configure password requirements and expiration
+- **Session Management**: Automatic logout and session security
+- **SSL Required**: All access through secure HTTPS connection
+
+### 🛒 Purchase History & Order Tracking
+
+**SuiteCRM Customization for Purchase Data:**
+
+SuiteCRM can be configured to track customer purchases across different business verticals:
+
+**Standard Modules (Built-in):**
+- **Opportunities**: Track sales opportunities and potential purchases
+- **Accounts**: Customer company information and purchase history
+- **Contacts**: Individual customer details and interaction history
+
+**Custom Configuration (Post-Deployment):**
+```php
+// Example: Custom module for product purchases
+$sugar_config['custom_modules'] = array(
+    'Purchases' => array(
+        'customer_id' => 'relate',
+        'product_name' => 'varchar(255)',
+        'purchase_date' => 'date',
+        'amount' => 'currency',
+        'status' => 'enum', // pending, completed, refunded
+        'category' => 'enum' // electronics, services, subscriptions
+    )
+);
+```
+
+**AI Agent Integration:**
+```typescript
+// AI Agent retrieves purchase context during calls
+const customerPurchases = await suiteCRM.getPurchases({
+  customerId: customerData.id,
+  includeHistory: true,
+  limit: 10 // Last 10 purchases
+});
+
+// Enhance AI response with purchase context
+const purchaseContext = customerPurchases.map(p => ({
+  product: p.product_name,
+  date: p.purchase_date,
+  amount: p.amount,
+  status: p.status
+}));
+```
+
+**Vertical-Specific Configurations:**
+
+**E-commerce/Retail:**
+- Product catalogs and inventory tracking
+- Purchase frequency and lifetime value
+- Return and exchange history
+
+**SaaS/Subscription:**
+- Subscription tiers and renewal dates
+- Feature usage and upgrade history
+- Billing and payment method tracking
+
+**Service Businesses:**
+- Service packages and completion tracking
+- Project history and deliverables
+- Client satisfaction and repeat business
 
 ## 🎨 Frontend
 
@@ -435,7 +660,23 @@ cd backend && npm run dev   # Backend development
    terraform output
 
    # Access CRM at crm.yourdomain.com
+   # Login with initial admin credentials (from terraform variables)
    # AI agent will automatically lookup customers during phone calls
+   ```
+
+6. **Initial CRM Setup** *(One-time manual step)*
+   ```bash
+   # Access: https://crm.yourdomain.com
+   # Username: admin
+   # Password: [from your suitecrm_admin_password variable]
+
+   # Complete initial setup wizard:
+   # - Configure system settings
+   # - Set up additional users
+   # - Import customer data (if migrating from existing system)
+   # - Configure email settings and integrations
+   # - Set up purchase/order tracking modules for your business vertical
+   # - Import historical purchase data for AI context
    ```
 
 ### Environment Variables
@@ -532,6 +773,12 @@ phone_number = "+15551234567"
 - Verify all dependencies are installed
 - Review build logs for specific errors
 
+**CRM Access Issues**
+- Verify SSL certificate is properly configured for crm.yourdomain.com
+- Check that SuiteCRM service is running: `terraform output suitecrm_service_url`
+- Confirm admin password is correctly set in Terraform variables
+- Access logs available in Google Cloud Console → Cloud Run → Logs
+
 ## 🤝 Contributing
 
 1. Fork the repository
@@ -547,10 +794,11 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 🆘 Support
 
 For support and questions:
-- **Phone**: [Configured phone number] - AI-powered support with CRM context
-- **Email**: support@yourbusiness.com
-- **Web**: Submit support ticket through the platform
-- **CRM Portal**: crm.yourbusiness.com - Customer management and case tracking
+- **Phone**: [Configured phone number] - AI-powered support with CRM context *(Customers)*
+- **Email**: support@yourbusiness.com *(Customers)*
+- **Web**: Submit support ticket through the platform *(Customers)*
+- **CRM Portal**: crm.yourbusiness.com - Customer management and case tracking *(Administrators)*
+  - Login: admin / [suitecrm_admin_password from Terraform variables]
 
 ---
 
