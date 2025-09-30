@@ -446,7 +446,7 @@ const fieldMapping = {
 
 **Communication Services**:
 - Twilio API for phone number provisioning and telephony
-- Gmail API for email processing and responses
+- SendGrid API for email processing and responses
 
 **Data Storage**:
 - Firestore database for conversations
