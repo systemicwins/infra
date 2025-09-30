@@ -19,6 +19,7 @@
     "@google-cloud/text-to-speech": "^5.0.0",
     "@google-cloud/speech": "^6.0.0",
     "@google-cloud/gmail": "^1.0.0",
+    "openai": "^4.0.0",
     "firebase-admin": "^12.0.0",
     "cors": "^2.8.5",
     "helmet": "^7.1.0",

@@ -887,11 +887,26 @@ AI-Generated Response → Gmail API → Customer Email
 ```
 Customer Call/SMS → Twilio API → Voice/SMS Processing
      ↓
+Speech-to-Text → OpenAI Whisper → Text Transcription
+     ↓
 Customer Lookup → SuiteCRM MCP → Customer Context
      ↓
 Gemini 2.5 Flash Processing → AI Response Generation
      ↓
+Text-to-Speech → ElevenLabs → Audio Response
+     ↓
 Response Delivery → Customer via Twilio
+```
+
+**Speech Processing Pipeline:**
+```
+Audio Input → OpenAI Whisper (Primary) → Text Transcription
+     ↓                          ↓
+Google Cloud STT (Fallback) → Gemini 2.5 Flash → AI Response
+     ↓                          ↓
+ElevenLabs TTS (Primary) → Audio Output → Customer
+     ↓
+Google Cloud TTS (Fallback)
 ```
 
 ### Infrastructure Flow
@@ -1028,6 +1043,10 @@ SUITECRM_URL=https://crm.yourbusiness.com
 GMAIL_CLIENT_ID=your-gmail-client-id
 GMAIL_CLIENT_SECRET=your-gmail-client-secret
 GMAIL_REFRESH_TOKEN=your-gmail-refresh-token
+
+# ElevenLabs API Configuration (for enhanced text-to-speech)
+ELEVENLABS_API_KEY=your-elevenlabs-api-key
+ELEVENLABS_VOICE_ID=your-preferred-voice-id
 ```
 
 **Terraform** (`terraform.tfvars`)
@@ -1036,6 +1055,10 @@ project_id = "your-gcp-project-id"
 region = "us-central1"
 environment = "production"
 phone_number = "+15551234567"
+
+# ElevenLabs Configuration (for enhanced text-to-speech)
+elevenlabs_api_key = "your-elevenlabs-api-key"
+elevenlabs_voice_id = "your-preferred-voice-id"
 ```
 
 ## 🔧 Configuration
@@ -1091,6 +1114,24 @@ phone_number = "+15551234567"
    # 1. Send test email to configured Gmail account
    # 2. Verify AI agent processes and responds
    # 3. Check conversation history in Firestore
+   ```
+
+8. **ElevenLabs API Setup** *(Manual - for enhanced text-to-speech)*
+   ```bash
+   # Set up ElevenLabs API:
+   # 1. Create ElevenLabs account at elevenlabs.io
+   # 2. Generate API key in account settings
+   # 3. Choose preferred voice ID (optional)
+   # 4. Update terraform.tfvars with ElevenLabs credentials
+   ```
+
+9. **Speech Services Testing** *(Optional)*
+   ```bash
+   # Test speech-to-text and text-to-speech:
+   # 1. Test OpenAI Whisper transcription quality
+   # 2. Test ElevenLabs voice quality and naturalness
+   # 3. Verify fallback mechanisms work correctly
+   # 4. Check audio processing latency
    ```
 
 ## 📊 Monitoring & Logging
@@ -1165,4 +1206,4 @@ For support and questions:
 
 **Complete Multi-Channel Business Infrastructure**: Fully automated deployment of AI-powered customer support across phone, SMS, web chat, and email with integrated CRM for seamless business acquisition and customer retention.
 
-**Built with ❤️ using Google Cloud Platform, Vertex AI (Gemini 2.5 Flash), SuiteCRM, PostgreSQL, Twilio API, Gmail API, and modern web technologies.**
+**Built with ❤️ using Google Cloud Platform, Vertex AI (Gemini 2.5 Flash), OpenAI (Whisper), ElevenLabs (TTS), SuiteCRM, PostgreSQL, Twilio API, Gmail API, and modern web technologies.**

@@ -73,3 +73,16 @@ variable "gmail_refresh_token" {
   type        = string
   sensitive   = true
 }
+
+variable "elevenlabs_api_key" {
+  description = "ElevenLabs API key for text-to-speech"
+  type        = string
+  sensitive   = true
+}
+
+variable "elevenlabs_voice_id" {
+  description = "ElevenLabs voice ID for text-to-speech (optional, defaults to first available)"
+  type        = string
+  sensitive   = true
+  default     = ""
+}

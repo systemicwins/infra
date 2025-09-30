@@ -3,6 +3,7 @@ import { TextToSpeechClient } from '@google-cloud/text-to-speech';
 import { SpeechToTextClient } from '@google-cloud/speech';
 import { Firestore } from '@google-cloud/firestore';
 import { gmail } from '@google-cloud/gmail';
+import OpenAI from 'openai';
 import { logger } from '../utils/logger.js';
 import { SuiteCRMMCPServer } from './SuiteCRMMCP.js';
 
@@ -29,7 +30,10 @@ export class AIAgentService {
   private speechToTextClient: SpeechToTextClient;
   private firestore: Firestore;
   private gmailClient: any;
+  private openAI: OpenAI;
   private suiteCRMMCP: SuiteCRMMCPServer;
+  private elevenLabsAPIKey: string;
+  private elevenLabsVoiceId: string;
   private projectId: string;
   private location: string;
 
@@ -64,6 +68,15 @@ export class AIAgentService {
 
     // Initialize SuiteCRM MCP server
     this.suiteCRMMCP = new SuiteCRMMCPServer();
+
+    // Initialize OpenAI for Whisper
+    this.openAI = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+
+    // Initialize ElevenLabs credentials
+    this.elevenLabsAPIKey = process.env.ELEVENLABS_API_KEY || '';
+    this.elevenLabsVoiceId = process.env.ELEVENLABS_VOICE_ID || '';
   }
 
   async processSMS(from: string, message: string): Promise<string> {
@@ -373,6 +386,134 @@ Respond to the customer's message:`;
     }
 
     return null;
+  }
+
+  /**
+   * Speech-to-Text with fallback logic
+   * Primary: OpenAI Whisper, Fallback: Google Cloud Speech-to-Text
+   */
+  private async speechToTextWithFallback(audioBuffer: Buffer, languageCode: string = 'en-US'): Promise<string> {
+    try {
+      // Try OpenAI Whisper first
+      if (process.env.OPENAI_API_KEY) {
+        logger.info('Using OpenAI Whisper for speech-to-text');
+
+        // Create a file-like object for OpenAI Whisper
+        const audioFile = {
+          data: audioBuffer,
+          name: 'audio.wav',
+          type: 'audio/wav'
+        } as any;
+
+        const transcription = await this.openAI.audio.transcriptions.create({
+          file: audioFile,
+          model: 'whisper-1',
+          language: languageCode.split('-')[0], // Extract language part (e.g., 'en' from 'en-US')
+          response_format: 'text'
+        });
+        return transcription;
+      }
+    } catch (error) {
+      logger.warn('OpenAI Whisper failed, falling back to Google Cloud Speech-to-Text:', error);
+    }
+
+    // Fallback to Google Cloud Speech-to-Text
+    try {
+      logger.info('Using Google Cloud Speech-to-Text as fallback');
+      const [response] = await this.speechToTextClient.recognize({
+        audio: { content: audioBuffer },
+        config: {
+          encoding: 'LINEAR16',
+          sampleRateHertz: 16000,
+          languageCode,
+          enableAutomaticPunctuation: true,
+        },
+      });
+
+      return response.results?.[0]?.alternatives?.[0]?.transcript || '';
+    } catch (error) {
+      logger.error('Google Cloud Speech-to-Text also failed:', error);
+      throw new Error('All speech-to-text services failed');
+    }
+  }
+
+  /**
+   * Text-to-Speech with fallback logic
+   * Primary: ElevenLabs, Fallback: Google Cloud Text-to-Speech
+   */
+  private async textToSpeechWithFallback(text: string, voiceName?: string): Promise<Buffer> {
+    try {
+      // Try ElevenLabs first
+      if (this.elevenLabsAPIKey) {
+        logger.info('Using ElevenLabs for text-to-speech');
+        return await this.generateElevenLabsAudio(text, voiceName);
+      }
+    } catch (error) {
+      logger.warn('ElevenLabs failed, falling back to Google Cloud Text-to-Speech:', error);
+    }
+
+    // Fallback to Google Cloud Text-to-Speech
+    try {
+      logger.info('Using Google Cloud Text-to-Speech as fallback');
+      return await this.generateGoogleTTSAudio(text, voiceName);
+    } catch (error) {
+      logger.error('Google Cloud Text-to-Speech also failed:', error);
+      throw new Error('All text-to-speech services failed');
+    }
+  }
+
+  /**
+   * Generate audio using ElevenLabs API
+   */
+  private async generateElevenLabsAudio(text: string, voiceName?: string): Promise<Buffer> {
+    // Use a default voice if no specific voice ID is configured
+    const voiceId = this.elevenLabsVoiceId || '21m00Tcm4TlvDq8ikWAM'; // Rachel voice
+
+    const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+      method: 'POST',
+      headers: {
+        'Accept': 'audio/mpeg',
+        'Content-Type': 'application/json',
+        'xi-api-key': this.elevenLabsAPIKey,
+      },
+      body: JSON.stringify({
+        text,
+        model_id: 'eleven_monolingual_v1',
+        voice_settings: {
+          stability: 0.5,
+          similarity_boost: 0.5,
+          style: 0.0,
+          use_speaker_boost: true
+        }
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`ElevenLabs API error: ${response.status}`);
+    }
+
+    return Buffer.from(await response.arrayBuffer());
+  }
+
+  /**
+   * Generate audio using Google Cloud Text-to-Speech
+   */
+  private async generateGoogleTTSAudio(text: string, voiceName?: string): Promise<Buffer> {
+    const [response] = await this.textToSpeechClient.synthesizeSpeech({
+      input: { text },
+      voice: {
+        languageCode: 'en-US',
+        name: voiceName || 'en-US-Neural2-D', // Professional female voice
+        ssmlGender: 'FEMALE',
+      },
+      audioConfig: {
+        audioEncoding: 'LINEAR16',
+        speakingRate: 1.0,
+        pitch: 0.0,
+      },
+    });
+
+    return response.audioContent as Buffer;
   }
 
 
