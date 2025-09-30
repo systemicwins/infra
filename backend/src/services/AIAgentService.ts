@@ -1,9 +1,10 @@
-import { SessionsClient } from '@google-cloud/dialogflow-cx';
+import { VertexAI } from '@google-cloud/aiplatform';
 import { TextToSpeechClient } from '@google-cloud/text-to-speech';
 import { SpeechToTextClient } from '@google-cloud/speech';
 import { Firestore } from '@google-cloud/firestore';
 import { gmail } from '@google-cloud/gmail';
 import { logger } from '../utils/logger.js';
+import { SuiteCRMMCPServer } from './SuiteCRMMCP.js';
 
 interface ConversationContext {
   sessionId: string;
@@ -23,22 +24,24 @@ interface ConversationContext {
 }
 
 export class AIAgentService {
-  private sessionsClient: SessionsClient;
+  private vertexAI: VertexAI;
   private textToSpeechClient: TextToSpeechClient;
   private speechToTextClient: SpeechToTextClient;
   private firestore: Firestore;
   private gmailClient: any;
+  private suiteCRMMCP: SuiteCRMMCPServer;
   private projectId: string;
-  private agentId: string;
   private location: string;
 
   constructor() {
     // Initialize Google Cloud clients
     this.projectId = process.env.FIRESTORE_PROJECT_ID || 'your-project-id';
-    this.location = process.env.DIALOGFLOW_LOCATION || 'us-central1';
+    this.location = process.env.VERTEX_AI_LOCATION || 'us-central1';
 
-    this.sessionsClient = new SessionsClient({
-      projectId: this.projectId,
+    // Initialize Vertex AI with Gemini 2.5 Flash
+    this.vertexAI = new VertexAI({
+      project: this.projectId,
+      location: this.location,
     });
 
     this.textToSpeechClient = new TextToSpeechClient({
@@ -59,8 +62,8 @@ export class AIAgentService {
       projectId: this.projectId,
     });
 
-    // Dialogflow CX Agent ID (will be provided by Terraform output)
-    this.agentId = process.env.DIALOGFLOW_AGENT_ID || 'your-agent-id';
+    // Initialize SuiteCRM MCP server
+    this.suiteCRMMCP = new SuiteCRMMCPServer();
   }
 
   async processSMS(from: string, message: string): Promise<string> {
@@ -80,20 +83,20 @@ export class AIAgentService {
         timestamp: new Date(),
       });
 
-      // Process with Dialogflow CX
-      const dialogflowResponse = await this.processWithDialogflow(sessionId, message);
+      // Process with Gemini 2.5 Flash + MCP
+      const geminiResponse = await this.processWithGemini(sessionId, message, context);
 
       // Add AI response to context
       context.messages.push({
         role: 'assistant',
-        content: dialogflowResponse,
+        content: geminiResponse,
         timestamp: new Date(),
       });
 
       // Save updated context
       await this.saveConversationContext(context);
 
-      return dialogflowResponse;
+      return geminiResponse;
 
     } catch (error) {
       logger.error('Error processing SMS:', error);
@@ -118,20 +121,20 @@ export class AIAgentService {
         timestamp: new Date(),
       });
 
-      // Process with Dialogflow CX
-      const dialogflowResponse = await this.processWithDialogflow(sessionId, speech);
+      // Process with Gemini 2.5 Flash + MCP
+      const geminiResponse = await this.processWithGemini(sessionId, speech, context);
 
       // Add AI response to context
       context.messages.push({
         role: 'assistant',
-        content: dialogflowResponse,
+        content: geminiResponse,
         timestamp: new Date(),
       });
 
       // Save updated context
       await this.saveConversationContext(context);
 
-      return dialogflowResponse;
+      return geminiResponse;
 
     } catch (error) {
       logger.error('Error processing voice:', error);
@@ -151,7 +154,7 @@ export class AIAgentService {
           timestamp: new Date(),
         });
 
-        const response = await this.processWithDialogflow(sessionId || 'web-chat', message);
+        const response = await this.processWithGemini(sessionId || 'web-chat', message, newContext);
         newContext.messages.push({
           role: 'assistant',
           content: response,
@@ -169,7 +172,7 @@ export class AIAgentService {
         timestamp: new Date(),
       });
 
-      const response = await this.processWithDialogflow(sessionId || 'web-chat', message);
+      const response = await this.processWithGemini(sessionId || 'web-chat', message, context);
 
       context.messages.push({
         role: 'assistant',
@@ -203,20 +206,20 @@ export class AIAgentService {
         timestamp: new Date(),
       });
 
-      // Process with Dialogflow CX
-      const dialogflowResponse = await this.processWithDialogflow(sessionId, `Email: ${subject} - ${body}`);
+      // Process with Gemini 2.5 Flash + MCP
+      const geminiResponse = await this.processWithGemini(sessionId, `Email: ${subject} - ${body}`, context);
 
       // Add AI response to context
       context.messages.push({
         role: 'assistant',
-        content: dialogflowResponse,
+        content: geminiResponse,
         timestamp: new Date(),
       });
 
       // Save updated context
       await this.saveConversationContext(context);
 
-      return dialogflowResponse;
+      return geminiResponse;
 
     } catch (error) {
       logger.error('Error processing email:', error);
@@ -261,47 +264,115 @@ export class AIAgentService {
     }
   }
 
-  private async processWithDialogflow(sessionId: string, message: string): Promise<string> {
+  private async processWithGemini(sessionId: string, message: string, context: ConversationContext): Promise<string> {
     try {
-      // Create session path
-      const sessionPath = this.sessionsClient.projectLocationAgentSessionPath(
-        this.projectId,
-        this.location,
-        this.agentId,
-        sessionId
-      );
-
-      // Create detect intent request
-      const request = {
-        session: sessionPath,
-        queryInput: {
-          text: {
-            text: message,
-          },
-          languageCode: 'en',
+      // Get the generative model (Gemini 2.5 Flash)
+      const generativeModel = this.vertexAI.getGenerativeModel({
+        model: 'gemini-2.5-flash',
+        generationConfig: {
+          temperature: 0.7,
+          topK: 40,
+          topP: 0.95,
+          maxOutputTokens: 2048,
         },
-      };
+      });
 
-      // Detect intent
-      const [response] = await this.sessionsClient.detectIntent(request);
+      // Build conversation history for context
+      const conversationHistory = context.messages.map(msg => ({
+        role: msg.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: msg.content }]
+      }));
 
-      if (response.queryResult?.responseMessages) {
-        // Extract text response from Dialogflow
-        const textMessages = response.queryResult.responseMessages.filter(
-          msg => msg.text && msg.text.text
-        );
+      // Try to get customer context from MCP server
+      let customerContext = null;
+      try {
+        // Extract phone/email from session ID or context
+        const identifier = this.extractCustomerIdentifier(sessionId, context);
 
-        if (textMessages.length > 0) {
-          return textMessages[0].text?.text?.[0] || 'I understand your concern. Let me help you with that.';
+        if (identifier) {
+          customerContext = await this.suiteCRMMCP.executeTool('getCustomer', identifier);
+          logger.info('Retrieved customer context for enhanced response', { customerId: customerContext?.id });
         }
+      } catch (error) {
+        logger.warn('Could not retrieve customer context, proceeding without it:', error);
       }
 
-      return 'I understand your concern. Let me help you with that.';
+      // Build system prompt with customer context
+      let systemPrompt = `You are a helpful customer support AI assistant for a business that uses SuiteCRM for customer management.
+
+You have access to customer data including purchase history, support cases, and preferences. Use this information to provide personalized, contextual support.
+
+Current conversation context:
+- Session ID: ${sessionId}
+- Message count: ${context.messages.length}`;
+
+      if (customerContext) {
+        systemPrompt += `
+
+Customer Information:
+- Name: ${customerContext.first_name} ${customerContext.last_name}
+- Email: ${customerContext.email}
+- Phone: ${customerContext.phone}
+- Account created: ${customerContext.created_date}
+- Last contact: ${customerContext.last_contact_date || 'Never'}`;
+      }
+
+      systemPrompt += `
+
+Guidelines:
+- Be helpful, professional, and empathetic
+- Use customer context when available to personalize responses
+- If you need more information, ask politely
+- Escalate to human support if the issue is complex
+- Keep responses conversational and natural
+
+Respond to the customer's message:`;
+
+      // Create the chat session
+      const chat = generativeModel.startChat({
+        history: conversationHistory,
+        systemInstruction: systemPrompt,
+      });
+
+      // Send the message
+      const result = await chat.sendMessage(message);
+      const response = result.response.text();
+
+      logger.info('Generated Gemini response', {
+        sessionId,
+        messageLength: message.length,
+        responseLength: response.length,
+        hasCustomerContext: !!customerContext
+      });
+
+      return response;
 
     } catch (error) {
-      logger.error('Error processing with Dialogflow:', error);
+      logger.error('Error processing with Gemini:', error);
       return 'I apologize, but I\'m experiencing technical difficulties. Please try again or contact our support team directly.';
     }
+  }
+
+  private extractCustomerIdentifier(sessionId: string, context: ConversationContext): { phone?: string; email?: string } | null {
+    // Extract phone/email from session ID or conversation context
+    // Session ID format: sms_phone_number_timestamp or email_email_address_timestamp
+    const parts = sessionId.split('_');
+
+    if (parts.length >= 2) {
+      const identifier = parts[1];
+
+      // Check if it looks like a phone number (contains digits and common phone symbols)
+      if (/^[\d\+\-\(\)\s]+$/.test(identifier) && identifier.length >= 10) {
+        return { phone: identifier.replace(/[^\d]/g, '') };
+      }
+
+      // Check if it looks like an email
+      if (identifier.includes('@') && identifier.includes('.')) {
+        return { email: identifier };
+      }
+    }
+
+    return null;
   }
 
 

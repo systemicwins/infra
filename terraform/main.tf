@@ -28,7 +28,7 @@ resource "google_project_service" "required_apis" {
     "secretmanager.googleapis.com",
     "speech.googleapis.com",
     "texttospeech.googleapis.com",
-    "dialogflow.googleapis.com",
+    "aiplatform.googleapis.com",
     "contactcenterai.googleapis.com",
     "contactcenterinsights.googleapis.com",
     "sql-component.googleapis.com",
@@ -179,12 +179,8 @@ resource "google_cloud_run_service" "ai_agent" {
           }
         }
         env {
-          name  = "DIALOGFLOW_AGENT_ID"
-          value = google_dialogflow_cx_agent.support_agent.name
-        }
-        env {
-          name  = "DIALOGFLOW_LOCATION"
-          value = var.contact_center_location
+          name  = "VERTEX_AI_LOCATION"
+          value = var.region
         }
       }
     }
@@ -413,6 +409,13 @@ resource "google_project_iam_member" "suitecrm_cloud_sql" {
   member  = "serviceAccount:${google_service_account.cloud_run_sa.email}"
 }
 
+# Vertex AI IAM permissions for Gemini 2.5 Flash
+resource "google_project_iam_member" "vertex_ai_user" {
+  project = var.project_id
+  role    = "roles/aiplatform.user"
+  member  = "serviceAccount:${google_service_account.cloud_run_sa.email}"
+}
+
 # Gmail API permissions for email processing
 resource "google_project_iam_member" "gmail_api_access" {
   project = var.project_id
@@ -426,19 +429,8 @@ resource "google_project_iam_member" "gmail_readonly_access" {
   member  = "serviceAccount:${google_service_account.cloud_run_sa.email}"
 }
 
-# Dialogflow CX Agent for AI-powered conversations
-resource "google_dialogflow_cx_agent" "support_agent" {
-  display_name = "${var.environment}-support-agent"
-  location     = var.contact_center_location
-  default_language_code = "en"
-  time_zone = "America/Los_Angeles"
-
-  # Enable speech recognition and synthesis
-  enable_spell_correction = true
-  enable_stackdriver_logging = true
-
-  depends_on = [google_project_service.required_apis]
-}
+# Note: Dialogflow CX replaced with Vertex AI Gemini 2.5 Flash
+# Contact Center AI still used for phone integration
 
 # Contact Center Insights Instance for conversation analysis
 resource "google_contact_center_insights_instance" "main" {

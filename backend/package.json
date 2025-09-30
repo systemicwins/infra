@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "express": "^4.18.2",
-    "@google-cloud/dialogflow-cx": "^4.0.0",
+    "@google-cloud/aiplatform": "^3.0.0",
     "@google-cloud/text-to-speech": "^5.0.0",
     "@google-cloud/speech": "^6.0.0",
     "@google-cloud/gmail": "^1.0.0",

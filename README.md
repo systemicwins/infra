@@ -18,10 +18,10 @@ A comprehensive customer support system built on Google Cloud Platform with AI-p
 
 This platform provides a complete customer support solution for businesses with:
 
-- **AI-Powered Conversations**: Google Dialogflow CX for natural language understanding
+- **AI-Powered Conversations**: Vertex AI Gemini 2.5 Flash for natural language understanding
 - **Multi-Channel Support**: Phone, SMS, web chat, and email integration *(Complete communication stack)*
-  - **📞 Phone**: Google Contact Center AI with AI-powered responses
-  - **💬 SMS**: Dialogflow CX processing with CRM context
+  - **📞 Phone**: Twilio telephony with Gemini 2.5 Flash AI responses
+  - **💬 SMS**: Twilio SMS API with CRM context integration
   - **🌐 Web Chat**: Real-time chat interface with conversation history
   - **📧 Email**: Gmail API integration with AI-powered responses
 - **CRM Integration**: SuiteCRM for customer relationship management and context *(Fully automated deployment)*
@@ -367,12 +367,12 @@ const fieldMapping = {
 │   Frontend      │    │   Backend API   │    │   SuiteCRM      │    │  Google Cloud   │
 │   (Svelte)      │◄──►│   (Node.js)     │◄──►│   (PostgreSQL)  │◄──►│  Services       │
 │                 │    │                 │    │                 │    │                 │
-│ • Landing Page  │    │ • AI Agent      │    │ • Purchase Hist.│    │ • Dialogflow CX │
+│ • Landing Page  │    │ • AI Agent      │    │ • Purchase Hist.│    │ • Gemini 2.5 Flash│
 │ • Support Form  │    │ • Phone Handler │    │ • Sales Pipeline│    │ • Firestore     │
 │ • Chat Interface│    │ • CRM Lookup    │    │ • Support Cases │    │ • Cloud Run     │
 │ • Email Forms   │    │ • Email Proc.   │    │ • Email Workfl. │    │ • Gmail API     │
-└─────────────────┘    └─────────────────┘    └─────────────────┘    │ • Contact Center│
-                                                                     └─────────────────┘
+└─────────────────┘    └─────────────────┘    └─────────────────┘    │ • Twilio API    │
+                                                                   └─────────────────┘
 ```
 
 ### Service Integration
@@ -393,8 +393,8 @@ const fieldMapping = {
 | **Cloud Run** | Serverless backend | Auto-scaling Node.js API & SuiteCRM |
 | **Cloud SQL** | PostgreSQL database | SuiteCRM customer data storage |
 | **Firestore** | NoSQL database | Conversation & ticket storage |
-| **Dialogflow CX** | Conversational AI | Natural language processing |
-| **Contact Center AI** | Phone integration | Voice/SMS handling |
+| **Vertex AI** | Conversational AI | Gemini 2.5 Flash for natural language processing |
+| **Twilio API** | Phone integration | Voice/SMS handling & number provisioning |
 | **Cloud Storage** | Static hosting | Frontend assets |
 | **Secret Manager** | Credential storage | API keys & phone numbers |
 | **VPC Network** | Secure networking | Private subnets & NAT |
@@ -410,14 +410,18 @@ const fieldMapping = {
 - Service accounts with minimal permissions
 
 **AI Services**:
-- Dialogflow CX agent for conversations
-- Contact Center Insights for analysis
+- Vertex AI Gemini 2.5 Flash for conversational AI
+- Custom MCP server for SuiteCRM integration
 
 **Business Applications** *(New - Fully Automated)*:
 - ✅ **Cloud SQL PostgreSQL** for SuiteCRM database
 - ✅ **Cloud Run service** for SuiteCRM application
 - ✅ **Load Balancer** for subdomain routing (`crm.yourdomain.com`)
 - ✅ **SSL Certificates** for custom domain security
+
+**Communication Services**:
+- Twilio API for phone number provisioning and telephony
+- Gmail API for email processing and responses
 
 **Data Storage**:
 - Firestore database for conversations
@@ -835,15 +839,15 @@ GET /api/phone/numbers
 2. Views landing page with support options
    ↓
 3. Chooses communication method:
-      ├── Phone → Google Contact Center AI
-      ├── SMS → Dialogflow CX processing
+      ├── Phone → Twilio telephony with Gemini 2.5 Flash AI
+      ├── SMS → Twilio SMS API with CRM context
       ├── Email → Gmail API with AI processing
       └── Web Form → Support ticket creation
    ↓
 4. AI Agent processes request:
       ├── Customer identification (phone/email lookup)
       ├── CRM context retrieval from SuiteCRM
-      ├── Natural language understanding (Dialogflow CX)
+      ├── Natural language understanding (Gemini 2.5 Flash)
       ├── Context retrieval from Firestore
       ├── Personalized response generation
       ├── Email response sending (for email channel)
@@ -872,11 +876,22 @@ Email Auto-Response (if email channel) → Gmail API
 ```
 Customer Email → Gmail API → Email Processing Service
      ↓
-Email Content Analysis → Dialogflow CX → Intent Recognition
+Email Content Analysis → Gemini 2.5 Flash → Intent Recognition
      ↓
 Customer Lookup by Email → SuiteCRM → Purchase & Support History
      ↓
 AI-Generated Response → Gmail API → Customer Email
+```
+
+**Phone/SMS Flow:**
+```
+Customer Call/SMS → Twilio API → Voice/SMS Processing
+     ↓
+Customer Lookup → SuiteCRM MCP → Customer Context
+     ↓
+Gemini 2.5 Flash Processing → AI Response Generation
+     ↓
+Response Delivery → Customer via Twilio
 ```
 
 ### Infrastructure Flow
@@ -999,8 +1014,7 @@ cd backend && npm run dev   # Backend development
 **Backend** (`.env`)
 ```bash
 FIRESTORE_PROJECT_ID=your-project-id
-DIALOGFLOW_AGENT_ID=your-agent-id
-DIALOGFLOW_LOCATION=us-central1
+VERTEX_AI_LOCATION=us-central1
 SUPPORT_PHONE_NUMBER=+15551234567
 
 # SuiteCRM Configuration
@@ -1029,24 +1043,26 @@ phone_number = "+15551234567"
 ### Google Cloud Setup
 
 1. **Enable APIs**
-   - Contact Center AI
-   - Dialogflow CX
+   - Vertex AI
    - Firestore
    - Cloud Run
    - Cloud SQL
    - Speech-to-Text
    - Text-to-Speech
    - Certificate Manager (for custom domains)
+   - Gmail API (for email support)
 
 2. **Service Accounts**
    - Cloud Run service account with minimal permissions
-   - Dialogflow CX agent access
+   - Vertex AI access for Gemini 2.5 Flash
    - Cloud SQL access for SuiteCRM
+   - Gmail API access for email processing
 
-3. **Phone Number Configuration**
-   - Configure in Google Cloud Console
-   - Point webhook to deployed Cloud Run service
-   - Store in Secret Manager
+3. **Phone Number Configuration** *(Twilio Setup)*
+   - Set up Twilio account and purchase phone numbers
+   - Configure Twilio webhooks to point to deployed Cloud Run service
+   - Store Twilio credentials in Secret Manager
+   - Configure Twilio for voice and SMS handling
 
 4. **SuiteCRM Database Setup** *(Automated)*
    - PostgreSQL instance automatically created via Terraform
@@ -1096,9 +1112,10 @@ phone_number = "+15551234567"
 ### Common Issues
 
 **Phone Integration Not Working**
-- Verify phone number configuration in Google Cloud Console
-- Check webhook URL is accessible
-- Confirm Dialogflow CX agent is published
+- Verify Twilio phone number is properly configured
+- Check Twilio webhook URL is accessible and pointing to correct endpoint
+- Confirm Twilio credentials are correctly stored in Secret Manager
+- Test Twilio API connectivity from deployed Cloud Run service
 
 **Firestore Connection Issues**
 - Verify project ID configuration
@@ -1148,4 +1165,4 @@ For support and questions:
 
 **Complete Multi-Channel Business Infrastructure**: Fully automated deployment of AI-powered customer support across phone, SMS, web chat, and email with integrated CRM for seamless business acquisition and customer retention.
 
-**Built with ❤️ using Google Cloud Platform, Dialogflow CX, SuiteCRM, PostgreSQL, Gmail API, and modern web technologies.**
+**Built with ❤️ using Google Cloud Platform, Vertex AI (Gemini 2.5 Flash), SuiteCRM, PostgreSQL, Twilio API, Gmail API, and modern web technologies.**

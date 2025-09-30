@@ -23,9 +23,9 @@ output "firestore_database_name" {
   value       = google_firestore_database.main.name
 }
 
-output "dialogflow_cx_agent_name" {
-  description = "Name of the Dialogflow CX agent for customer support"
-  value       = google_dialogflow_cx_agent.support_agent.name
+output "vertex_ai_location" {
+  description = "Vertex AI location for Gemini 2.5 Flash"
+  value       = var.region
 }
 
 output "contact_center_insights_instance" {
