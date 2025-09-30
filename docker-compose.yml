@@ -1,0 +1,83 @@
+version: '3.8'
+
+services:
+  # Frontend Development
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+    depends_on:
+      - backend
+    networks:
+      - business-network
+
+  # Backend Development
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - PORT=8080
+      - FRONTEND_URL=http://localhost:5173
+      - FIRESTORE_PROJECT_ID=${FIRESTORE_PROJECT_ID:-your-project-id}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID}
+      - TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN}
+    depends_on:
+      - firestore-emulator
+    networks:
+      - business-network
+
+  # Firestore Emulator for local development
+  firestore-emulator:
+    image: google/cloud-sdk:emulator
+    ports:
+      - "8081:8080"
+    command: gcloud emulators firestore start --host-port=0.0.0.0:8080
+    networks:
+      - business-network
+
+  # Redis for caching (optional)
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - business-network
+
+  # Nginx reverse proxy for production-like setup
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deployment/nginx.conf:/etc/nginx/conf.d/default.conf
+      - ./frontend/build:/var/www/frontend
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - business-network
+
+volumes:
+  redis_data:
+
+networks:
+  business-network:
+    driver: bridge

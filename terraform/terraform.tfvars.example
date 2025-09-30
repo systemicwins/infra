@@ -1,0 +1,13 @@
+# GCP Configuration
+project_id = "your-gcp-project-id"
+region     = "us-central1"
+environment = "production"
+
+# Domain Configuration
+domain_name = "yourcompany.com"
+
+# Phone Number Configuration (to be configured manually in Google Cloud Console)
+phone_number = "+15551234567"
+
+# OpenAI Configuration (for AI customer support)
+openai_api_key = "your-openai-api-key"

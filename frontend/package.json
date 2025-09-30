@@ -1,0 +1,32 @@
+{
+  "name": "business-landing-page",
+  "version": "1.0.0",
+  "description": "Landing page for acquired business with customer support integration",
+  "type": "module",
+  "scripts": {
+    "dev": "vite dev",
+    "build": "vite build",
+    "preview": "vite preview",
+    "check": "svelte-kit sync && svelte-check --tsconfig ./jsconfig.json",
+    "check:watch": "svelte-kit sync && svelte-check --tsconfig ./jsconfig.json --watch",
+    "lint": "prettier --plugin-search-dir . --check . && eslint .",
+    "format": "prettier --plugin-search-dir . --write ."
+  },
+  "devDependencies": {
+    "@sveltejs/adapter-static": "^2.0.3",
+    "@sveltejs/kit": "^1.20.4",
+    "eslint": "^8.28.0",
+    "eslint-config-prettier": "^8.5.0",
+    "eslint-plugin-svelte": "^2.30.0",
+    "prettier": "^2.8.0",
+    "prettier-plugin-svelte": "^2.8.1",
+    "svelte": "^4.0.5",
+    "svelte-check": "^3.4.3",
+    "typescript": "^5.0.0",
+    "vite": "^4.4.5"
+  },
+  "dependencies": {
+    "bootstrap": "^5.3.0",
+    "axios": "^1.4.0"
+  }
+}
