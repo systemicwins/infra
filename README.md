@@ -1,4 +1,4 @@
-# 🤖 AI-Powered Customer Support Platform
+# 🤖 AI-Powered Business Infrastructure
 
 A comprehensive customer support system built on Google Cloud Platform with AI-powered conversational agents, multi-channel communication, and automated infrastructure provisioning.
 
