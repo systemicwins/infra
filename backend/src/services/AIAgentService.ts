@@ -29,11 +29,12 @@ export class AIAgentService {
   private textToSpeechClient: TextToSpeechClient;
   private speechToTextClient: SpeechToTextClient;
   private firestore: Firestore;
-  private gmailClient: any;
   private openAI: OpenAI;
   private suiteCRMMCP: SuiteCRMMCPServer;
   private elevenLabsAPIKey: string;
   private elevenLabsVoiceId: string;
+  private sendGridAPIKey: string;
+  private sendGridFromEmail: string;
   private projectId: string;
   private location: string;
 
@@ -61,11 +62,6 @@ export class AIAgentService {
       projectId: this.projectId,
     });
 
-    // Initialize Gmail client
-    this.gmailClient = new gmail.Gmail({
-      projectId: this.projectId,
-    });
-
     // Initialize SuiteCRM MCP server
     this.suiteCRMMCP = new SuiteCRMMCPServer();
 
@@ -77,6 +73,10 @@ export class AIAgentService {
     // Initialize ElevenLabs credentials
     this.elevenLabsAPIKey = process.env.ELEVENLABS_API_KEY || '';
     this.elevenLabsVoiceId = process.env.ELEVENLABS_VOICE_ID || '';
+
+    // Initialize SendGrid credentials
+    this.sendGridAPIKey = process.env.SENDGRID_API_KEY || '';
+    this.sendGridFromEmail = process.env.SENDGRID_FROM_EMAIL || 'support@yourbusiness.com';
   }
 
   async processSMS(from: string, message: string): Promise<string> {
@@ -242,37 +242,40 @@ export class AIAgentService {
 
   async sendEmailResponse(to: string, subject: string, response: string): Promise<boolean> {
     try {
-      // Create email message
-      const emailContent = [
-        'To: ' + to,
-        'Subject: Re: ' + subject,
-        'Content-Type: text/plain; charset=UTF-8',
-        '',
-        response,
-        '',
-        'This is an automated response from our AI customer support system.',
-        'For urgent matters, please call us directly.'
-      ].join('\r\n');
+      // Send email via SendGrid API
+      const emailData = {
+        personalizations: [{
+          to: [{ email: to }]
+        }],
+        from: {
+          email: this.sendGridFromEmail,
+          name: 'AI Customer Support'
+        },
+        subject: `Re: ${subject}`,
+        content: [{
+          type: 'text/plain',
+          value: `${response}\n\nThis is an automated response from our AI customer support system. For urgent matters, please call us directly.`
+        }]
+      };
 
-      const encodedMessage = Buffer.from(emailContent)
-        .toString('base64')
-        .replace(/\+/g, '-')
-        .replace(/\//g, '_')
-        .replace(/=+$/, '');
-
-      // Send email via Gmail API
-      await this.gmailClient.users.messages.send({
-        userId: 'me',
-        requestBody: {
-          raw: encodedMessage
-        }
+      const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.sendGridAPIKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(emailData)
       });
 
-      logger.info(`Email response sent to ${to}`);
+      if (!response.ok) {
+        throw new Error(`SendGrid API error: ${response.status} ${response.statusText}`);
+      }
+
+      logger.info(`Email response sent to ${to} via SendGrid`);
       return true;
 
     } catch (error) {
-      logger.error('Error sending email response:', error);
+      logger.error('Error sending email response via SendGrid:', error);
       return false;
     }
   }
@@ -303,8 +306,49 @@ export class AIAgentService {
         const identifier = this.extractCustomerIdentifier(sessionId, context);
 
         if (identifier) {
-          customerContext = await this.suiteCRMMCP.executeTool('getCustomer', identifier);
-          logger.info('Retrieved customer context for enhanced response', { customerId: customerContext?.id });
+          // Use MCP server to get comprehensive customer data
+          if (identifier.phone) {
+            customerContext = await this.suiteCRMMCP.executeTool('getCustomer', { phone: identifier.phone });
+          } else if (identifier.email) {
+            customerContext = await this.suiteCRMMCP.executeTool('getCustomer', { email: identifier.email });
+          }
+
+          if (customerContext) {
+            logger.info('Retrieved comprehensive customer context for enhanced response', {
+              customerId: customerContext.id,
+              totalPurchases: customerContext.total_purchases,
+              lifetimeValue: customerContext.lifetime_value
+            });
+
+            // Get additional context if we have customer ID
+            if (customerContext.id) {
+              try {
+                // Get purchase history
+                const purchaseHistory = await this.suiteCRMMCP.executeTool('getPurchaseHistory', {
+                  customerId: customerContext.id,
+                  limit: 5
+                });
+                customerContext.recentPurchases = purchaseHistory;
+
+                // Get support cases
+                const supportCases = await this.suiteCRMMCP.executeTool('getSupportCases', {
+                  customerId: customerContext.id,
+                  limit: 3
+                });
+                customerContext.recentSupportCases = supportCases;
+
+                // Get customer preferences
+                const preferences = await this.suiteCRMMCP.executeTool('getCustomerPreferences', {
+                  customerId: customerContext.id
+                });
+                customerContext.preferences = preferences;
+
+                logger.info('Retrieved comprehensive customer context including purchases and support history');
+              } catch (contextError) {
+                logger.warn('Could not retrieve additional customer context:', contextError);
+              }
+            }
+          }
         }
       } catch (error) {
         logger.warn('Could not retrieve customer context, proceeding without it:', error);
@@ -313,21 +357,62 @@ export class AIAgentService {
       // Build system prompt with customer context
       let systemPrompt = `You are a helpful customer support AI assistant for a business that uses SuiteCRM for customer management.
 
-You have access to customer data including purchase history, support cases, and preferences. Use this information to provide personalized, contextual support.
+You have access to comprehensive customer data including purchase history, support cases, preferences, and lifetime value metrics. Use this information to provide personalized, contextual support that anticipates customer needs.
 
 Current conversation context:
 - Session ID: ${sessionId}
-- Message count: ${context.messages.length}`;
+- Message count: ${context.messages.length}
+- Channel: ${this.getChannelFromSessionId(sessionId)}`;
 
       if (customerContext) {
         systemPrompt += `
 
-Customer Information:
-- Name: ${customerContext.first_name} ${customerContext.last_name}
-- Email: ${customerContext.email}
-- Phone: ${customerContext.phone}
-- Account created: ${customerContext.created_date}
-- Last contact: ${customerContext.last_contact_date || 'Never'}`;
+=== CUSTOMER PROFILE ===
+Name: ${customerContext.first_name} ${customerContext.last_name}
+Email: ${customerContext.email}
+Phone: ${customerContext.phone}
+Account Created: ${customerContext.created_date}
+Last Contact: ${customerContext.last_contact_date || 'Never'}
+Preferred Contact Method: ${customerContext.preferred_contact_method || 'Not specified'}
+Customer Segment: ${customerContext.customer_segment || 'Standard'}
+Total Purchases: ${customerContext.total_purchases || 0}
+Lifetime Value: $${customerContext.lifetime_value?.toFixed(2) || '0.00'}
+Tags: ${customerContext.tags?.join(', ') || 'None'}`;
+
+        // Add purchase history if available
+        if (customerContext.recentPurchases && customerContext.recentPurchases.length > 0) {
+          systemPrompt += `
+
+=== RECENT PURCHASES ===
+${customerContext.recentPurchases.map((p: any) =>
+  `- ${p.product_name} (${p.product_category}) - $${p.amount} on ${p.purchase_date}`
+).join('\n')}`;
+        }
+
+        // Add support cases if available
+        if (customerContext.recentSupportCases && customerContext.recentSupportCases.length > 0) {
+          systemPrompt += `
+
+=== RECENT SUPPORT CASES ===
+${customerContext.recentSupportCases.map((c: any) =>
+  `- ${c.subject} (${c.status}, ${c.priority}) - ${c.created_date}`
+).join('\n')}`;
+        }
+
+        // Add preferences if available
+        if (customerContext.preferences) {
+          systemPrompt += `
+
+=== CUSTOMER PREFERENCES ===
+Language: ${customerContext.preferences.preferred_language}
+Contact Method: ${customerContext.preferences.preferred_contact_method}
+Marketing Opt-in: ${customerContext.preferences.marketing_opt_in ? 'Yes' : 'No'}
+Notifications: ${customerContext.preferences.notification_preferences.join(', ')}`;
+          if (customerContext.preferences.special_requirements) {
+            systemPrompt += `
+Special Requirements: ${customerContext.preferences.special_requirements}`;
+          }
+        }
       }
 
       systemPrompt += `
@@ -386,6 +471,13 @@ Respond to the customer's message:`;
     }
 
     return null;
+  }
+
+  private getChannelFromSessionId(sessionId: string): string {
+    if (sessionId.startsWith('sms_')) return 'SMS';
+    if (sessionId.startsWith('voice_')) return 'Phone Call';
+    if (sessionId.startsWith('email_')) return 'Email';
+    return 'Web Chat';
   }
 
   /**

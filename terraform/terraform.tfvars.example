@@ -25,8 +25,12 @@ gmail_refresh_token = "your-gmail-refresh-token"
 elevenlabs_api_key = "your-elevenlabs-api-key"
 elevenlabs_voice_id = "your-preferred-voice-id"  # Optional, leave empty to use default
 
+# SendGrid API Configuration (for email sending)
+sendgrid_api_key = "your-sendgrid-api-key"
+sendgrid_from_email = "support@yourbusiness.com"
+
 # Note: To enable email support, you need to:
-# 1. Set up a Gmail API project in Google Cloud Console
-# 2. Create OAuth 2.0 credentials
-# 3. Configure OAuth consent screen
-# 4. Generate refresh token for service account access
+# 1. Create a SendGrid account at sendgrid.com
+# 2. Generate API key in SendGrid dashboard
+# 3. Verify your sender email address in SendGrid
+# 4. Update terraform.tfvars with SendGrid credentials

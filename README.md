@@ -1,6 +1,7 @@
 # 🤖 AI-Powered Business Infrastructure
 
-A comprehensive customer support system built on Google Cloud Platform with AI-powered conversational agents, multi-channel communication, and automated infrastructure provisioning.
+A comprehensive customer support system built on Google Cloud Platform with AI-powered conversational agents, multi-channel communication, and automated infrastructure provisioning. Note that this system is fairly complex and getting even moreso but
+it's an ambitious infrastructure design intended to be a good starting point for nearly any business acquisition in any vertical.
 
 ## 📋 Table of Contents
 
@@ -23,7 +24,7 @@ This platform provides a complete customer support solution for businesses with:
   - **📞 Phone**: Twilio telephony with Gemini 2.5 Flash AI responses
   - **💬 SMS**: Twilio SMS API with CRM context integration
   - **🌐 Web Chat**: Real-time chat interface with conversation history
-  - **📧 Email**: Gmail API integration with AI-powered responses
+  - **📧 Email**: SendGrid API integration with AI-powered responses
 - **CRM Integration**: SuiteCRM for customer relationship management and context *(Fully automated deployment)*
 - **Persistent Memory**: Conversation history and context retention across CRM records
 - **Scalable Infrastructure**: Auto-scaling Google Cloud resources with complete CRM stack
@@ -120,8 +121,8 @@ const processEmail = async (emailData) => {
     channel: 'email'
   });
 
-  // Send response email
-  await emailService.send(customer.email, response);
+  // Send response email via SendGrid
+  await sendgridAPI.send(customer.email, response);
 };
 ```
 
@@ -137,10 +138,10 @@ const emailWorkflows = {
 
 **3. Email Marketing Integration**
 ```typescript
-// Connect with email marketing platforms
+// SendGrid provides both transactional and marketing capabilities
 const emailMarketing = {
-  mailchimp: 'Sync customer data for targeted campaigns',
-  sendgrid: 'Transactional emails with AI personalization',
+  sendgrid: 'Transactional emails with AI personalization and marketing campaigns',
+  mailchimp: 'Sync customer data for targeted campaigns via SendGrid webhooks',
   customSMTP: 'Self-hosted email server for complete control'
 };
 ```
@@ -149,46 +150,33 @@ const emailMarketing = {
 
 **To Add Email Capabilities:**
 
-**Gmail/SMTP Integration:**
+**SendGrid Integration:**
 ```hcl
-# Add to Terraform for Gmail API access
-resource "google_project_service" "gmail" {
-  service = "gmail.googleapis.com"
-  disable_on_destroy = false
+# SendGrid API credentials stored in Secret Manager
+resource "google_secret_manager_secret" "sendgrid_api_key" {
+  secret_id = "${var.environment}-sendgrid-api-key"
+  replication { auto {} }
 }
 
-# IAM for Gmail access
-resource "google_service_account_iam_member" "gmail_access" {
-  service_account_id = google_service_account.cloud_run_sa.name
-  role               = "roles/gmail.send"
-  member             = "serviceAccount:${google_service_account.cloud_run_sa.email}"
+resource "google_secret_manager_secret" "sendgrid_from_email" {
+  secret_id = "${var.environment}-sendgrid-from-email"
+  replication { auto {} }
+}
+
+# IAM for accessing SendGrid secrets
+resource "google_secret_manager_secret_iam_member" "sendgrid_api_key_accessor" {
+  secret_id = google_secret_manager_secret.sendgrid_api_key.secret_id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.cloud_run_sa.email}"
 }
 ```
 
 **Email Processing Service:**
 ```typescript
-// New Cloud Run service for email processing
-resource "google_cloud_run_service" "email_processor" {
-  name     = "${var.environment}-email-processor"
-  location = var.region
-
-  template {
-    spec {
-      containers {
-        image = "gcr.io/${var.project_id}/${var.environment}-email-processor:latest"
-        env {
-          name  = "GMAIL_CLIENT_ID"
-          value_from { secret_key_ref { name = "gmail-client-id" } }
-        }
-        env {
-          name  = "GMAIL_CLIENT_SECRET"
-          value_from { secret_key_ref { name = "gmail-client-secret" } }
-        }
-      }
-    }
-  }
-}
+// AI Agent Service handles email processing with SendGrid
+// No separate email processor service needed - integrated in main AI agent
 ```
+
 
 **Email Workflow Automation:**
 ```php
@@ -367,12 +355,11 @@ const fieldMapping = {
 │   Frontend      │    │   Backend API   │    │   SuiteCRM      │    │  Google Cloud   │
 │   (Svelte)      │◄──►│   (Node.js)     │◄──►│   (PostgreSQL)  │◄──►│  Services       │
 │                 │    │                 │    │                 │    │                 │
-│ • Landing Page  │    │ • AI Agent      │    │ • Purchase Hist.│    │ • Gemini 2.5 Flash│
-│ • Support Form  │    │ • Phone Handler │    │ • Sales Pipeline│    │ • Firestore     │
+│ • Landing Page  │    │ • AI Agent      │    │ • Purchase Hist.│    │ • Firestore     │
 │ • Chat Interface│    │ • CRM Lookup    │    │ • Support Cases │    │ • Cloud Run     │
-│ • Email Forms   │    │ • Email Proc.   │    │ • Email Workfl. │    │ • Gmail API     │
+│ • Email Forms   │    │ • Email Proc.   │    │ • Email Workfl. │    │ • SendGrid API  │
 └─────────────────┘    └─────────────────┘    └─────────────────┘    │ • Twilio API    │
-                                                                   └─────────────────┘
+                                                                     └─────────────────┘
 ```
 
 ### Service Integration
@@ -471,10 +458,11 @@ context.messages.push({
 
 | Endpoint | Method | Purpose |
 |----------|--------|---------|
-| `/sms` | POST | Handle incoming SMS messages |
-| `/voice` | POST | Process voice call input |
-| `/chat` | POST | Web chat interface |
-| `/crm/lookup` | POST | Customer lookup from SuiteCRM |
+| `/sms` | POST | Handle incoming SMS messages with Gemini 2.5 Flash + MCP |
+| `/voice` | POST | Process voice calls with OpenAI Whisper + Gemini 2.5 Flash + ElevenLabs |
+| `/chat` | POST | Web chat interface with Gemini 2.5 Flash + MCP |
+| `/email` | POST | Process incoming emails with Gemini 2.5 Flash + SendGrid |
+| `/crm/mcp` | POST | Direct MCP access to SuiteCRM tools |
 
 ## 🔗 CRM Integration
 
@@ -482,38 +470,51 @@ context.messages.push({
 
 The AI agent seamlessly integrates with SuiteCRM to provide personalized customer support experiences:
 
-**Customer Lookup Process:**
+**Enhanced Customer Context Process:**
 ```typescript
 // AI Agent receives phone number or customer identifier
 const customerContext = await lookupCustomer(phoneNumber);
 
-// Query SuiteCRM database for customer information
-const customerData = await suiteCRM.lookup({
-  phone: phoneNumber,
-  include: ['contact_history', 'support_cases', 'preferences']
+// Query SuiteCRM via MCP server for comprehensive customer information
+const customerData = await suiteCRM.executeTool('getCustomer', {
+  phone: phoneNumber
 });
 
-// Enhance AI response with customer context
+// Get additional context via MCP
+const purchaseHistory = await suiteCRM.executeTool('getPurchaseHistory', {
+  customerId: customerData.id,
+  limit: 5
+});
+
+const supportCases = await suiteCRM.executeTool('getSupportCases', {
+  customerId: customerData.id,
+  limit: 3
+});
+
+// Enhance AI response with comprehensive customer context
 const personalizedResponse = await geminiFlash.generateResponse({
   message,
   context: {
-    customerName: customerData.first_name,
-    lastInteraction: customerData.last_contact_date,
-    supportHistory: customerData.case_count,
-    preferences: customerData.preferences
+    customerProfile: customerData,
+    recentPurchases: purchaseHistory,
+    supportHistory: supportCases,
+    preferences: await suiteCRM.executeTool('getCustomerPreferences', { customerId: customerData.id })
   }
 });
 ```
 
 ### CRM ↔ AI Agent Integration Features
 
-- **Real-time Customer Lookup**: Phone number identification triggers instant CRM data retrieval
-- **Purchase History Access**: AI agent can access complete customer purchase/order history
-- **Contextual Responses**: AI responses personalized based on purchase patterns and preferences
-- **Automatic Ticket Creation**: Support conversations automatically create CRM cases with purchase context
-- **Conversation History Sync**: All interactions logged in both Firestore and SuiteCRM
-- **Customer Preference Tracking**: Language preferences, contact methods, and service history
-- **Vertical-Specific Data**: Custom fields for different business types (products, services, subscriptions)
+- **Real-time Customer Lookup**: Phone/email identification triggers instant CRM data retrieval via MCP
+- **Comprehensive Purchase History**: AI agent accesses complete customer purchase/order history with detailed transaction data
+- **Advanced Customer Profiling**: AI has access to customer segment, lifetime value, preferences, and behavioral patterns
+- **Support Case Integration**: AI can create support tickets and access existing case history with full context
+- **Customer Preference Tracking**: Language preferences, contact methods, notification preferences, and special requirements
+- **Contextual Responses**: AI responses personalized based on complete customer profile, purchase patterns, and support history
+- **Conversation History Sync**: All interactions logged in both Firestore and SuiteCRM with full context preservation
+- **Vertical-Specific Data**: Custom fields for different business types (products, services, subscriptions, IoT, etc.)
+- **Customer Lifetime Value**: AI understands customer value metrics for personalized service prioritization
+- **Behavioral Analytics**: AI can reference customer behavior patterns for predictive support
 
 ### SuiteCRM Configuration
 
@@ -528,6 +529,23 @@ $sugar_config['dbconfig'] = array(
     'db_name' => 'suitecrm_db',
     'db_manager' => 'pg',
 );
+```
+
+**MCP Server Integration:**
+```typescript
+// SuiteCRM MCP server provides real-time data access
+const suiteCRMMCP = new SuiteCRMMCPServer();
+
+// MCP tools available to AI agent
+const availableTools = [
+  'getCustomer',           // Customer profile and contact info
+  'getPurchaseHistory',    // Complete purchase history with categories
+  'getSupportCases',       // Support case history with resolution details
+  'getCustomerPreferences', // Communication and service preferences
+  'createSupportTicket',   // Create new support cases
+  'updateCustomerContactInfo', // Update customer contact information
+  'getCustomerLifetimeValue'   // Customer value metrics and analytics
+];
 ```
 
 ### 🔐 SuiteCRM Authentication & Access
@@ -831,7 +849,23 @@ GET /api/phone/numbers
 
 ## 🔄 Data Flow
 
-### Customer Interaction Flow
+### Complete Multi-Channel Customer Interaction Flow
+
+**All channels follow the same intelligent processing pipeline:**
+
+```
+Customer Input (Phone/SMS/Email/Web) → Input Processing
+     ↓
+Customer Identification → SuiteCRM MCP → Customer Record Retrieval
+     ↓
+Customer Context (History, Preferences, Cases, Purchase Data) → AI Agent Enhancement
+     ↓
+Personalized Response Generation → Customer
+     ↓
+Conversation & Case Updates → Both Firestore & SuiteCRM
+```
+
+### Channel-Specific Processing Flows
 
 ```
 1. Customer visits website (yourbusiness.com)
@@ -846,12 +880,14 @@ GET /api/phone/numbers
    ↓
 4. AI Agent processes request:
       ├── Customer identification (phone/email lookup)
-      ├── CRM context retrieval from SuiteCRM
+      ├── CRM context retrieval from SuiteCRM (via MCP)
       ├── Natural language understanding (Gemini 2.5 Flash)
       ├── Context retrieval from Firestore
+      ├── Speech-to-text processing (OpenAI Whisper)
+      ├── Text-to-speech generation (ElevenLabs)
       ├── Personalized response generation
-      ├── Email response sending (for email channel)
-      └── Conversation history update (both Firestore & CRM)
+      ├── Email response sending (for email channel via SendGrid)
+      └── Conversation history update (both Firestore & SuiteCRM)
    ↓
 5. Response delivered via chosen channel with full customer context
 ```
@@ -874,39 +910,135 @@ Email Auto-Response (if email channel) → Gmail API
 
 **Email-Specific Flow:**
 ```
-Customer Email → Gmail API → Email Processing Service
+Customer Email → Email Processing → Gemini 2.5 Flash (AI Agent)
      ↓
-Email Content Analysis → Gemini 2.5 Flash → Intent Recognition
+Email Content Analysis → Intent Recognition
      ↓
-Customer Lookup by Email → SuiteCRM → Purchase & Support History
+Customer Lookup by Email → SuiteCRM (MCP) → Purchase & Support History
      ↓
-AI-Generated Response → Gmail API → Customer Email
+AI-Generated Response → SendGrid API → Customer Email
 ```
 
-**Phone/SMS Flow:**
+**Complete Phone Call Flow:**
 ```
-Customer Call/SMS → Twilio API → Voice/SMS Processing
+📞 Customer Call → Twilio API → Voice Audio Stream
      ↓
-Speech-to-Text → OpenAI Whisper → Text Transcription
+🎙️ Speech-to-Text → OpenAI Whisper (Primary) → Text Transcription
+     ↓                          ↓
+🔄 Google Cloud STT (Fallback) → Customer Context Lookup
+     ↓                          ↓
+🤖 Gemini 2.5 Flash → AI Response Generation (with CRM Context)
+     ↓                          ↓
+🎤 Text-to-Speech → ElevenLabs (Primary) → Natural Audio Response
+     ↓                          ↓
+🔊 Google Cloud TTS (Fallback) → Twilio Audio Delivery
      ↓
-Customer Lookup → SuiteCRM MCP → Customer Context
-     ↓
-Gemini 2.5 Flash Processing → AI Response Generation
-     ↓
-Text-to-Speech → ElevenLabs → Audio Response
-     ↓
-Response Delivery → Customer via Twilio
+📞 Customer Receives AI Response
 ```
 
-**Speech Processing Pipeline:**
+**SMS/Text Message Flow:**
 ```
-Audio Input → OpenAI Whisper (Primary) → Text Transcription
-     ↓                          ↓
-Google Cloud STT (Fallback) → Gemini 2.5 Flash → AI Response
-     ↓                          ↓
-ElevenLabs TTS (Primary) → Audio Output → Customer
+💬 SMS Received → Twilio SMS API → Text Message
      ↓
-Google Cloud TTS (Fallback)
+🔍 Customer Lookup → SuiteCRM MCP → Customer Context & History
+     ↓
+🤖 Gemini 2.5 Flash → AI Response Generation
+     ↓
+📤 SMS Response → Twilio SMS API → Customer
+```
+
+**Email Flow:**
+```
+📧 Email Received → Email Processing → Customer Identification
+     ↓
+🔍 CRM Lookup → SuiteCRM MCP → Customer Context & History
+     ↓
+🤖 Gemini 2.5 Flash → AI Response Generation
+     ↓
+📤 Email Response → SendGrid API → Customer Email
+```
+
+**Complete Processing Pipeline:**
+```
+🎙️ Audio Input → OpenAI Whisper (Primary STT) → Text Transcription
+     ↓                          ↓
+🔄 Google Cloud STT (Fallback) → Gemini 2.5 Flash → AI Response Generation
+     ↓                          ↓
+🎤 ElevenLabs TTS (Primary) → Natural Audio Response
+     ↓
+🔊 Google Cloud TTS (Fallback)
+```
+
+**Technical Implementation:**
+```typescript
+// Complete phone call processing
+async processPhoneCall(audioStream) {
+  // 1. Speech-to-Text with Whisper
+  const transcription = await openAIWhisper.transcribe(audioStream);
+
+  // 2. AI Processing with Gemini 2.5 Flash
+  const customerContext = await suiteCRMMCP.getCustomer({ phone: extractPhone(audioStream) });
+  const aiResponse = await geminiFlash.generate({
+    text: transcription,
+    context: customerContext,
+    conversationHistory: getHistory(sessionId)
+  });
+
+  // 3. Text-to-Speech with ElevenLabs
+  const audioResponse = await elevenLabs.synthesize(aiResponse);
+
+  return audioResponse;
+}
+```
+
+### Detailed Channel Processing
+
+**📞 Phone Call Processing:**
+```
+1. Customer calls phone number → Twilio receives call
+2. Twilio streams audio to webhook → Cloud Run AI Agent receives audio
+3. Audio processing → OpenAI Whisper converts speech to text
+4. Customer identification → Extract phone number from call
+5. CRM lookup → SuiteCRM MCP queries customer database
+6. Context enhancement → Gemini 2.5 Flash processes with customer history
+7. Response generation → AI creates personalized response
+8. Audio synthesis → ElevenLabs converts text to natural speech
+9. Response delivery → Twilio streams audio back to customer
+10. Conversation logging → Both Firestore and SuiteCRM updated
+```
+
+**💬 SMS/Text Message Processing:**
+```
+1. Customer sends SMS → Twilio receives message via webhook
+2. Message processing → Extract sender phone number and content
+3. Customer identification → SuiteCRM MCP lookup by phone
+4. Context retrieval → Get customer's purchase history and preferences
+5. AI processing → Gemini 2.5 Flash generates contextual response
+6. Response delivery → Twilio sends SMS reply to customer
+7. Conversation tracking → Update Firestore and SuiteCRM records
+```
+
+**🌐 Web Chat Processing:**
+```
+1. Customer visits website → Loads chat interface
+2. Message submission → Frontend sends to backend API
+3. Context lookup → Check for existing conversation session
+4. Customer identification → Optional email/phone lookup
+5. AI processing → Gemini 2.5 Flash generates response
+6. Response delivery → Real-time chat response to customer
+7. Conversation persistence → Save to Firestore for continuity
+```
+
+**📧 Email Processing:**
+```
+1. Customer sends email → SendGrid receives email
+2. Email parsing → Extract sender, subject, and content
+3. Customer identification → SuiteCRM MCP lookup by email
+4. Context enhancement → Get customer's support history and preferences
+5. AI processing → Gemini 2.5 Flash generates contextual email response
+6. Email composition → Create personalized email reply
+7. Response delivery → SendGrid sends email to customer
+8. Conversation tracking → Update both systems with interaction
 ```
 
 ### Infrastructure Flow
@@ -1039,14 +1171,13 @@ SUITECRM_DB_NAME=suitecrm_db
 SUITECRM_DB_USER=suitecrm_user
 SUITECRM_DB_PASSWORD=your-secure-password
 SUITECRM_URL=https://crm.yourbusiness.com
-# Gmail API Configuration (for email support)
-GMAIL_CLIENT_ID=your-gmail-client-id
-GMAIL_CLIENT_SECRET=your-gmail-client-secret
-GMAIL_REFRESH_TOKEN=your-gmail-refresh-token
-
 # ElevenLabs API Configuration (for enhanced text-to-speech)
 ELEVENLABS_API_KEY=your-elevenlabs-api-key
 ELEVENLABS_VOICE_ID=your-preferred-voice-id
+
+# SendGrid API Configuration (for email sending)
+SENDGRID_API_KEY=your-sendgrid-api-key
+SENDGRID_FROM_EMAIL=support@yourbusiness.com
 ```
 
 **Terraform** (`terraform.tfvars`)
@@ -1059,6 +1190,10 @@ phone_number = "+15551234567"
 # ElevenLabs Configuration (for enhanced text-to-speech)
 elevenlabs_api_key = "your-elevenlabs-api-key"
 elevenlabs_voice_id = "your-preferred-voice-id"
+
+# SendGrid Configuration (for email sending)
+sendgrid_api_key = "your-sendgrid-api-key"
+sendgrid_from_email = "support@yourbusiness.com"
 ```
 
 ## 🔧 Configuration
@@ -1073,13 +1208,12 @@ elevenlabs_voice_id = "your-preferred-voice-id"
    - Speech-to-Text
    - Text-to-Speech
    - Certificate Manager (for custom domains)
-   - Gmail API (for email support)
 
 2. **Service Accounts**
    - Cloud Run service account with minimal permissions
    - Vertex AI access for Gemini 2.5 Flash
    - Cloud SQL access for SuiteCRM
-   - Gmail API access for email processing
+   - Secret Manager access for SendGrid credentials
 
 3. **Phone Number Configuration** *(Twilio Setup)*
    - Set up Twilio account and purchase phone numbers
@@ -1098,22 +1232,22 @@ elevenlabs_voice_id = "your-preferred-voice-id"
    - SSL certificates automatically provisioned for `yourbusiness.com` and `crm.yourbusiness.com`
    - DNS configuration: Point your domain to the load balancer IP address
 
-6. **Gmail API Setup** *(Manual - for email support)*
+6. **SendGrid API Setup** *(Manual - for email support)*
    ```bash
-   # Set up Gmail API in Google Cloud Console:
-   # 1. Enable Gmail API for your project
-   # 2. Create OAuth 2.0 credentials (Desktop app type)
-   # 3. Configure OAuth consent screen
-   # 4. Generate refresh token using OAuth flow
-   # 5. Update terraform.tfvars with Gmail credentials
+   # Set up SendGrid API:
+   # 1. Create SendGrid account at sendgrid.com
+   # 2. Generate API key in SendGrid dashboard
+   # 3. Verify your sender email address in SendGrid
+   # 4. Update terraform.tfvars with SendGrid credentials
    ```
 
 7. **Email Integration Testing** *(Optional)*
    ```bash
    # Test email processing:
-   # 1. Send test email to configured Gmail account
-   # 2. Verify AI agent processes and responds
+   # 1. Send test email to configured SendGrid sender address
+   # 2. Verify AI agent processes and responds via SendGrid
    # 3. Check conversation history in Firestore
+   # 4. Verify email delivery and response quality
    ```
 
 8. **ElevenLabs API Setup** *(Manual - for enhanced text-to-speech)*
@@ -1175,11 +1309,11 @@ elevenlabs_voice_id = "your-preferred-voice-id"
 - Access logs available in Google Cloud Console → Cloud Run → Logs
 
 **Email Integration Issues**
-- Verify Gmail API is enabled in Google Cloud Console
-- Check Gmail OAuth credentials are correctly configured
-- Confirm Gmail refresh token is valid and not expired
-- Test Gmail API access: `gcloud auth application-default login`
+- Verify SendGrid API key is correctly configured in terraform.tfvars
+- Confirm SendGrid sender email is verified in SendGrid dashboard
 - Check email processing logs in Cloud Run service logs
+- Test SendGrid API connectivity: Verify API key has mail send permissions
+- Validate email template formatting and personalization
 
 ## 🤝 Contributing
 
@@ -1206,4 +1340,4 @@ For support and questions:
 
 **Complete Multi-Channel Business Infrastructure**: Fully automated deployment of AI-powered customer support across phone, SMS, web chat, and email with integrated CRM for seamless business acquisition and customer retention.
 
-**Built with ❤️ using Google Cloud Platform, Vertex AI (Gemini 2.5 Flash), OpenAI (Whisper), ElevenLabs (TTS), SuiteCRM, PostgreSQL, Twilio API, Gmail API, and modern web technologies.**
+**Built with ❤️ using Google Cloud Platform, Vertex AI (Gemini 2.5 Flash), OpenAI (Whisper), ElevenLabs (TTS), SuiteCRM (MCP Integration), PostgreSQL, Twilio API, SendGrid API, and modern web technologies.**

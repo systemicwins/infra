@@ -344,6 +344,20 @@ resource "google_secret_manager_secret" "elevenlabs_voice_id" {
   }
 }
 
+resource "google_secret_manager_secret" "sendgrid_api_key" {
+  secret_id = "${var.environment}-sendgrid-api-key"
+  replication {
+    auto {}
+  }
+}
+
+resource "google_secret_manager_secret" "sendgrid_from_email" {
+  secret_id = "${var.environment}-sendgrid-from-email"
+  replication {
+    auto {}
+  }
+}
+
 resource "google_secret_manager_secret_version" "openai_api_key" {
   secret      = google_secret_manager_secret.openai_api_key.name
   secret_data = var.openai_api_key
@@ -387,6 +401,16 @@ resource "google_secret_manager_secret_version" "elevenlabs_api_key" {
 resource "google_secret_manager_secret_version" "elevenlabs_voice_id" {
   secret      = google_secret_manager_secret.elevenlabs_voice_id.name
   secret_data = var.elevenlabs_voice_id
+}
+
+resource "google_secret_manager_secret_version" "sendgrid_api_key" {
+  secret      = google_secret_manager_secret.sendgrid_api_key.name
+  secret_data = var.sendgrid_api_key
+}
+
+resource "google_secret_manager_secret_version" "sendgrid_from_email" {
+  secret      = google_secret_manager_secret.sendgrid_from_email.name
+  secret_data = var.sendgrid_from_email
 }
 
 # IAM for Secret Manager access
@@ -434,6 +458,18 @@ resource "google_secret_manager_secret_iam_member" "elevenlabs_api_key_accessor"
 
 resource "google_secret_manager_secret_iam_member" "elevenlabs_voice_id_accessor" {
   secret_id = google_secret_manager_secret.elevenlabs_voice_id.secret_id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.cloud_run_sa.email}"
+}
+
+resource "google_secret_manager_secret_iam_member" "sendgrid_api_key_accessor" {
+  secret_id = google_secret_manager_secret.sendgrid_api_key.secret_id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.cloud_run_sa.email}"
+}
+
+resource "google_secret_manager_secret_iam_member" "sendgrid_from_email_accessor" {
+  secret_id = google_secret_manager_secret.sendgrid_from_email.secret_id
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${google_service_account.cloud_run_sa.email}"
 }

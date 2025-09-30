@@ -86,3 +86,15 @@ variable "elevenlabs_voice_id" {
   sensitive   = true
   default     = ""
 }
+
+variable "sendgrid_api_key" {
+  description = "SendGrid API key for email sending"
+  type        = string
+  sensitive   = true
+}
+
+variable "sendgrid_from_email" {
+  description = "SendGrid verified sender email address"
+  type        = string
+  sensitive   = true
+}
