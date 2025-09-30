@@ -57,10 +57,37 @@ When acquiring a new business, **immediate access to customer data and support i
 - **📊 Business Intelligence**: Immediate visibility into customer base, purchase patterns, and lifetime value
 - **🔄 Operational Continuity**: Existing customers continue receiving contextual support without interruption
 - **📈 Growth Acceleration**: New customer acquisition supported by AI that understands customer behavior patterns
+- **🎯 Lead Conversion**: Automated lead nurturing and sales pipeline management for business growth
 
 **The Problem Solved**: Traditional business acquisitions often lose 20-30% of customers due to poor transition management. This infrastructure ensures **zero-downtime customer experience** with AI-powered support that knows every customer personally, including their complete purchase history and preferences.
 
 **Data Migration Note**: When acquiring an existing business, simply import customer and purchase data into SuiteCRM. The AI agent will immediately have access to complete customer context for personalized support.
+
+### Implementing Sales Pipeline Features *(Future Enhancement)*
+
+**To Add Complete Sales Pipeline:**
+
+1. **Enhanced Lead Capture Forms** *(Frontend)*
+   - Add detailed prospect qualification forms
+   - Industry-specific lead capture pages
+   - Lead scoring and qualification logic
+
+2. **Automated Lead Nurturing** *(Backend)*
+   - Email sequence automation via SuiteCRM workflows
+   - Lead scoring algorithms
+   - Sales team notification triggers
+
+3. **Sales Pipeline Management** *(SuiteCRM)*
+   - Custom pipeline stages for your business
+   - Lead-to-opportunity conversion workflows
+   - Sales forecasting and reporting
+
+4. **AI Agent Sales Integration** *(Backend)*
+   - Lead status checking during conversations
+   - Sales follow-up triggering
+   - Opportunity creation from qualified leads
+
+**Implementation Timeline:** 2-4 weeks for complete sales pipeline automation.
 
 ## 📧 Email Infrastructure Integration
 
@@ -513,16 +540,55 @@ $sugar_config['dbconfig'] = array(
 - **Session Management**: Automatic logout and session security
 - **SSL Required**: All access through secure HTTPS connection
 
-### 🛒 Purchase History & Order Tracking
+## 🎯 Sales Pipeline & Lead Management
 
-**SuiteCRM Customization for Purchase Data:**
+### Current Lead Capture Capabilities *(Basic)*
 
-SuiteCRM can be configured to track customer purchases across different business verticals:
+**Currently Implemented:**
+- **Newsletter Signup**: Email capture from homepage
+- **Support Tickets**: Contact information from support requests
+- **Basic CRM Modules**: SuiteCRM supports Leads, Accounts, and Opportunities
 
-**Standard Modules (Built-in):**
-- **Opportunities**: Track sales opportunities and potential purchases
-- **Accounts**: Customer company information and purchase history
-- **Contacts**: Individual customer details and interaction history
+**Missing Sales Pipeline Features:**
+- ❌ **Lead Scoring**: Automatic qualification of prospects
+- ❌ **Lead Nurturing**: Automated email sequences for prospects
+- ❌ **Sales Pipeline Stages**: Visual pipeline management
+- ❌ **Lead Qualification Forms**: Detailed prospect information capture
+- ❌ **Conversion Tracking**: Lead-to-customer journey analytics
+
+### Lead Journey: Visitor → Prospect → Lead → Customer
+
+**Current Flow:**
+```
+1. Visitor → Newsletter Signup → Email captured in CRM
+   ↓
+2. Visitor → Support Ticket → Contact info + issue logged
+   ↓
+3. Manual CRM Management → Sales team follows up manually
+```
+
+**Potential Enhanced Flow:**
+```
+1. Visitor → Landing Page → Newsletter Signup → Email captured
+   ↓
+2. Visitor → Lead Magnet → Contact Form → Qualified as Marketing Qualified Lead (MQL)
+   ↓
+3. Automated Nurturing → Email sequences → Sales Qualified Lead (SQL)
+   ↓
+4. Sales Follow-up → Opportunities Module → Customer conversion
+   ↓
+5. Purchase Tracking → Customer Data → AI context for support
+```
+
+### SuiteCRM Sales Pipeline Modules
+
+**Built-in Sales Modules:**
+- **Leads**: Prospect information and qualification status
+- **Accounts**: Company/organization information
+- **Contacts**: Individual contact details
+- **Opportunities**: Sales opportunities with value and stage tracking
+- **Activities**: Calls, meetings, emails, and tasks
+- **Reports**: Sales performance and pipeline analytics
 
 **Custom Configuration (Post-Deployment):**
 ```php
@@ -573,6 +639,106 @@ const purchaseContext = customerPurchases.map(p => ({
 - Service packages and completion tracking
 - Project history and deliverables
 - Client satisfaction and repeat business
+
+### Implementing Sales Pipeline Features
+
+**Frontend Lead Capture Forms:**
+```svelte
+<!-- Example: Enhanced lead capture form -->
+<form on:submit={handleLeadSubmit}>
+  <input type="text" placeholder="Company Name" required>
+  <input type="email" placeholder="Work Email" required>
+  <select name="companySize">
+    <option>1-10 employees</option>
+    <option>11-50 employees</option>
+    <option>51-200 employees</option>
+    <option>200+ employees</option>
+  </select>
+  <select name="industry">
+    <option>Technology</option>
+    <option>Healthcare</option>
+    <option>Finance</option>
+    <!-- More industry options -->
+  </select>
+  <textarea placeholder="What are you looking for?"></textarea>
+  <button type="submit">Get Started</button>
+</form>
+```
+
+**Backend Lead Processing:**
+```typescript
+// Enhanced lead capture with qualification
+supportRouter.post('/lead', async (req: Request, res: Response) => {
+  const leadData = {
+    ...req.body,
+    leadScore: calculateLeadScore(req.body), // Custom scoring logic
+    source: 'website',
+    status: 'new',
+    qualification: determineQualification(req.body)
+  };
+
+  // Create in SuiteCRM Leads module
+  await suiteCRM.createLead(leadData);
+
+  // Trigger automated nurturing sequence
+  await emailNurturing.startSequence(leadData.email);
+
+  res.json({ success: true, leadId: leadData.id });
+});
+```
+
+**Lead Scoring Algorithm:**
+```typescript
+function calculateLeadScore(leadData) {
+  let score = 0;
+
+  // Company size scoring
+  if (leadData.companySize === '200+ employees') score += 30;
+  else if (leadData.companySize === '51-200 employees') score += 20;
+
+  // Industry relevance
+  if (['Technology', 'Healthcare'].includes(leadData.industry)) score += 25;
+
+  // Message length (shows engagement)
+  if (leadData.message.length > 100) score += 15;
+
+  return score;
+}
+```
+
+### Automated Lead Nurturing
+
+**Email Sequence Configuration:**
+```php
+// SuiteCRM workflow for lead nurturing
+$sugar_config['lead_nurturing'] = array(
+    'welcome_series' => array(
+        'trigger' => 'new_lead_created',
+        'emails' => array(
+            'day_1' => 'Welcome and value proposition',
+            'day_3' => 'Case study or demo offer',
+            'day_7' => 'Product benefits deep dive',
+            'day_14' => 'Call-to-action for sales contact'
+        )
+    )
+);
+```
+
+### Sales Pipeline Integration
+
+**CRM ↔ AI Agent Integration for Sales:**
+```typescript
+// AI agent can access lead status during conversations
+const leadContext = await suiteCRM.getLeadStatus(customerEmail);
+// Returns: { stage: 'MQL', score: 75, nurturing: 'day_7_sent' }
+
+const salesResponse = await aiAgent.generate({
+  message,
+  context: customerContext,
+  leadStatus: leadContext,
+  action: 'sales_followup' // Trigger sales team notification
+});
+```
 
 ## 🎨 Frontend
 
