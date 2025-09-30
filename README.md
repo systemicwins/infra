@@ -426,7 +426,7 @@ const fieldMapping = {
 ### Conversational AI Pipeline
 
 **1. Message Reception**
-- Phone/SMS via Google Contact Center AI
+- Phone/SMS via Twilio telephony with Gemini 2.5 Flash AI
 - Web chat via REST API
 - Voice calls with speech-to-text conversion
 
@@ -1119,11 +1119,11 @@ cd backend && npm run dev   # Backend development
    terraform apply
    ```
 
-3. **Configure Phone Number**
-   - Access Google Cloud Console
-   - Navigate to Contact Center AI
-   - Configure phone number and webhook URL
-   - Update Secret Manager with phone number
+3. **Configure Phone Number** *(Twilio Setup)*
+   - Create Twilio account at twilio.com
+   - Purchase phone number(s) in your desired region
+   - Configure webhook URL to point to your deployed Cloud Run service
+   - Update terraform.tfvars with phone number and Twilio credentials
 
 4. **Deploy Application**
    ```bash
@@ -1216,10 +1216,10 @@ sendgrid_from_email = "support@yourbusiness.com"
    - Secret Manager access for SendGrid credentials
 
 3. **Phone Number Configuration** *(Twilio Setup)*
-   - Set up Twilio account and purchase phone numbers
-   - Configure Twilio webhooks to point to deployed Cloud Run service
-   - Store Twilio credentials in Secret Manager
-   - Configure Twilio for voice and SMS handling
+   - Create Twilio account at twilio.com
+   - Purchase phone number(s) in your desired region
+   - Configure webhook URL to point to deployed Cloud Run service
+   - Update terraform.tfvars with phone number and Twilio credentials
 
 4. **SuiteCRM Database Setup** *(Automated)*
    - PostgreSQL instance automatically created via Terraform
@@ -1273,7 +1273,7 @@ sendgrid_from_email = "support@yourbusiness.com"
 - **Cloud Logging**: Centralized logging for all services
 - **Cloud Monitoring**: Performance metrics and alerting
 - **Error Tracking**: Comprehensive error handling and reporting
-- **Conversation Analytics**: Contact Center Insights integration
+- **Conversation Analytics**: Cloud Logging and Monitoring integration
 
 ## 🔒 Security
 
