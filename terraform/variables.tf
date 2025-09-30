@@ -98,3 +98,24 @@ variable "sendgrid_from_email" {
   type        = string
   sensitive   = true
 }
+
+variable "mailchimp_api_key" {
+  description = "Mailchimp API key for email marketing campaigns"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "mailchimp_server_prefix" {
+  description = "Mailchimp server prefix (e.g., 'us1', 'us2')"
+  type        = string
+  sensitive   = true
+  default     = "us1"
+}
+
+variable "mailchimp_list_id" {
+  description = "Mailchimp audience/list ID for campaigns"
+  type        = string
+  sensitive   = true
+  default     = ""
+}

@@ -358,6 +358,27 @@ resource "google_secret_manager_secret" "sendgrid_from_email" {
   }
 }
 
+resource "google_secret_manager_secret" "mailchimp_api_key" {
+  secret_id = "${var.environment}-mailchimp-api-key"
+  replication {
+    auto {}
+  }
+}
+
+resource "google_secret_manager_secret" "mailchimp_server_prefix" {
+  secret_id = "${var.environment}-mailchimp-server-prefix"
+  replication {
+    auto {}
+  }
+}
+
+resource "google_secret_manager_secret" "mailchimp_list_id" {
+  secret_id = "${var.environment}-mailchimp-list-id"
+  replication {
+    auto {}
+  }
+}
+
 resource "google_secret_manager_secret_version" "openai_api_key" {
   secret      = google_secret_manager_secret.openai_api_key.name
   secret_data = var.openai_api_key
@@ -411,6 +432,21 @@ resource "google_secret_manager_secret_version" "sendgrid_api_key" {
 resource "google_secret_manager_secret_version" "sendgrid_from_email" {
   secret      = google_secret_manager_secret.sendgrid_from_email.name
   secret_data = var.sendgrid_from_email
+}
+
+resource "google_secret_manager_secret_version" "mailchimp_api_key" {
+  secret      = google_secret_manager_secret.mailchimp_api_key.name
+  secret_data = var.mailchimp_api_key
+}
+
+resource "google_secret_manager_secret_version" "mailchimp_server_prefix" {
+  secret      = google_secret_manager_secret.mailchimp_server_prefix.name
+  secret_data = var.mailchimp_server_prefix
+}
+
+resource "google_secret_manager_secret_version" "mailchimp_list_id" {
+  secret      = google_secret_manager_secret.mailchimp_list_id.name
+  secret_data = var.mailchimp_list_id
 }
 
 # IAM for Secret Manager access
@@ -470,6 +506,24 @@ resource "google_secret_manager_secret_iam_member" "sendgrid_api_key_accessor" {
 
 resource "google_secret_manager_secret_iam_member" "sendgrid_from_email_accessor" {
   secret_id = google_secret_manager_secret.sendgrid_from_email.secret_id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.cloud_run_sa.email}"
+}
+
+resource "google_secret_manager_secret_iam_member" "mailchimp_api_key_accessor" {
+  secret_id = google_secret_manager_secret.mailchimp_api_key.secret_id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.cloud_run_sa.email}"
+}
+
+resource "google_secret_manager_secret_iam_member" "mailchimp_server_prefix_accessor" {
+  secret_id = google_secret_manager_secret.mailchimp_server_prefix.secret_id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.cloud_run_sa.email}"
+}
+
+resource "google_secret_manager_secret_iam_member" "mailchimp_list_id_accessor" {
+  secret_id = google_secret_manager_secret.mailchimp_list_id.secret_id
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${google_service_account.cloud_run_sa.email}"
 }

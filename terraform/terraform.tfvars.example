@@ -29,8 +29,20 @@ elevenlabs_voice_id = "your-preferred-voice-id"  # Optional, leave empty to use 
 sendgrid_api_key = "your-sendgrid-api-key"
 sendgrid_from_email = "support@yourbusiness.com"
 
+# Mailchimp API Configuration (for email marketing campaigns)
+mailchimp_api_key = "your-mailchimp-api-key"
+mailchimp_server_prefix = "us1"  # e.g., "us1", "us2", etc.
+mailchimp_list_id = "your-mailchimp-audience-id"
+
 # Note: To enable email support, you need to:
 # 1. Create a SendGrid account at sendgrid.com
 # 2. Generate API key in SendGrid dashboard
 # 3. Verify your sender email address in SendGrid
 # 4. Update terraform.tfvars with SendGrid credentials
+
+# Note: To enable email marketing campaigns, you need to:
+# 1. Create a Mailchimp account at mailchimp.com
+# 2. Generate API key in Mailchimp dashboard (Account > Extras > API keys)
+# 3. Create an audience/list in Mailchimp
+# 4. Note your server prefix (visible in API key URL)
+# 5. Update terraform.tfvars with Mailchimp credentials
