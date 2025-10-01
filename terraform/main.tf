@@ -556,15 +556,7 @@ resource "google_project_iam_member" "gmail_readonly_access" {
 }
 
 # Note: Dialogflow CX replaced with Vertex AI Gemini 2.5 Flash
-# Contact Center AI still used for phone integration
-
-# Contact Center Insights Instance for conversation analysis
-resource "google_contact_center_insights_instance" "main" {
-  name     = "${var.environment}-ccai-instance"
-  location = var.contact_center_location
-
-  depends_on = [google_project_service.required_apis]
-}
+# Contact Center AI integration removed - using direct Vertex AI integration
 
 # Load Balancer for subdomain routing
 resource "google_compute_global_address" "default" {

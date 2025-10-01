@@ -28,11 +28,6 @@ output "vertex_ai_location" {
   value       = var.region
 }
 
-output "contact_center_insights_instance" {
-  description = "Contact Center Insights instance name"
-  value       = google_contact_center_insights_instance.main.name
-}
-
 output "support_phone_number_secret" {
   description = "Secret Manager secret containing the support phone number"
   value       = google_secret_manager_secret.support_phone_number.secret_id

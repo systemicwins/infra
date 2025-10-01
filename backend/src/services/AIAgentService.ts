@@ -6,7 +6,6 @@ import { gmail } from '@google-cloud/gmail';
 import OpenAI from 'openai';
 import { logger } from '../utils/logger.js';
 import { SuiteCRMMCPServer } from './SuiteCRMMCP.js';
-import { MailchimpService } from './MailchimpService.js';
 
 interface ConversationContext {
   sessionId: string;
@@ -32,7 +31,6 @@ export class AIAgentService {
   private firestore: Firestore;
   private openAI: OpenAI;
   private suiteCRMMCP: SuiteCRMMCPServer;
-  private mailchimp: MailchimpService;
   private elevenLabsAPIKey: string;
   private elevenLabsVoiceId: string;
   private sendGridAPIKey: string;
@@ -66,9 +64,6 @@ export class AIAgentService {
 
     // Initialize SuiteCRM MCP server
     this.suiteCRMMCP = new SuiteCRMMCPServer();
-
-    // Initialize Mailchimp service
-    this.mailchimp = new MailchimpService();
 
     // Initialize OpenAI for Whisper
     this.openAI = new OpenAI({
@@ -648,107 +643,4 @@ Respond to the customer's message:`;
     }
   }
 
-  /**
-   * Create and send an email campaign via Mailchimp
-   */
-  async createEmailCampaign(
-    campaignType: 'welcome' | 'promotional' | 'newsletter' | 'abandoned_cart',
-    targetEmails?: string[],
-    customerContext?: any
-  ): Promise<string | null> {
-    try {
-      // Generate campaign content using AI
-      const content = await this.mailchimp.generateAICampaignContent(campaignType, customerContext);
-
-      const campaignData = {
-        type: 'regular' as const,
-        settings: {
-          subject_line: content.subject,
-          title: `${campaignType} Campaign - ${new Date().toISOString()}`,
-          from_name: 'AI Customer Support',
-          reply_to: this.sendGridFromEmail
-        },
-        content: {
-          html: content.html,
-          plain_text: content.plainText
-        }
-      };
-
-      // If specific emails provided, create a segment for them
-      let segmentId = null;
-      if (targetEmails && targetEmails.length > 0) {
-        segmentId = await this.createEmailSegment(targetEmails);
-      }
-
-      const campaignId = await this.mailchimp.createCampaign(campaignData, segmentId);
-
-      if (campaignId) {
-        logger.info(`Created and sent email campaign: ${campaignId} (${campaignType})`);
-        return campaignId;
-      }
-
-      return null;
-    } catch (error) {
-      logger.error('Error creating email campaign:', error);
-      return null;
-    }
-  }
-
-  /**
-   * Add email to Mailchimp audience
-   */
-  async addToEmailList(email: string, mergeFields?: Record<string, any>, tags?: string[]): Promise<boolean> {
-    try {
-      return await this.mailchimp.addSubscriber(email, mergeFields, tags);
-    } catch (error) {
-      logger.error('Error adding email to Mailchimp list:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Remove email from Mailchimp audience
-   */
-  async removeFromEmailList(email: string): Promise<boolean> {
-    try {
-      return await this.mailchimp.removeSubscriber(email);
-    } catch (error) {
-      logger.error('Error removing email from Mailchimp list:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Create a segment for specific emails
-   */
-  private async createEmailSegment(emails: string[]): Promise<string | null> {
-    try {
-      // For simplicity, we'll create segments based on email domains or use a basic condition
-      // In a real implementation, you'd want more sophisticated segmentation
-      const conditions = emails.map(email => ({
-        condition_type: 'EmailAddress',
-        field: 'EMAIL',
-        op: 'one_of',
-        value: email
-      }));
-
-      const segmentName = `Campaign Segment ${new Date().toISOString()}`;
-      return await this.mailchimp.createSegment(segmentName, conditions);
-    } catch (error) {
-      logger.error('Error creating email segment:', error);
-      return null;
-    }
-  }
-
-  /**
-   * Get campaign analytics
-   */
-  async getCampaignAnalytics(campaignId: string): Promise<any> {
-    try {
-      return await this.mailchimp.getCampaignReport(campaignId);
-    } catch (error) {
-      logger.error('Error getting campaign analytics:', error);
-      return null;
-    }
-  }
 }
