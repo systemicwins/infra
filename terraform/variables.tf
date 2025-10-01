@@ -119,3 +119,27 @@ variable "mailchimp_list_id" {
   sensitive   = true
   default     = ""
 }
+
+variable "frappe_hr_db_password" {
+  description = "Frappe HR database password"
+  type        = string
+  sensitive   = true
+}
+
+variable "frappe_hr_admin_password" {
+  description = "Frappe HR admin password"
+  type        = string
+  sensitive   = true
+}
+
+variable "erpnext_db_password" {
+  description = "ERPNext database password"
+  type        = string
+  sensitive   = true
+}
+
+variable "erpnext_admin_password" {
+  description = "ERPNext admin password"
+  type        = string
+  sensitive   = true
+}

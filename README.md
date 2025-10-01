@@ -35,10 +35,10 @@ This platform provides a complete customer support solution for businesses with:
 **Fully Automated Deployment**: When you run `terraform apply`, this infrastructure automatically provisions:
 
 - ✅ **AI Customer Support**: Gemini 2.5 Flash with phone and chat integration
-- ✅ **CRM System**: SuiteCRM with PostgreSQL database (`crm.yourdomain.com`)
+- ✅ **CRM System**: SuiteCRM with MySQL database (`crm.yourdomain.com`)
 - ✅ **Load Balancing**: Subdomain routing for seamless service access
 - ✅ **SSL Security**: Automatic certificate management for custom domains
-- ✅ **Database Integration**: PostgreSQL with automated backups and scaling
+- ✅ **Database Integration**: MySQL 8.0 with automated backups and scaling
 
 ### Subdomain Architecture
 
@@ -46,6 +46,8 @@ When deployed with a custom domain (e.g., `yourbusiness.com`):
 
 - **Main Site**: `yourbusiness.com` - Landing page and support interface
 - **CRM Portal**: `crm.yourbusiness.com` - SuiteCRM customer management
+- **HR Portal**: `hr.yourbusiness.com` - Frappe HR employee management
+- **ERP Portal**: `erp.yourbusiness.com` - ERPNext business management
 - **API Endpoints**: Integrated across services for seamless data flow
 
 ### 💼 Why CRM Integration Matters for Business Acquisition
@@ -391,12 +393,14 @@ const fieldMapping = {
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │   Frontend      │    │   Backend API   │    │   SuiteCRM      │    │  Google Cloud   │
-│   (Svelte)      │◄──►│   (Node.js)     │◄──►│   (PostgreSQL)  │◄──►│  Services       │
+│   (Svelte)      │◄──►│   (Node.js)     │◄──►│   (MySQL 8.0)   │◄──►│  Services       │
 │                 │    │                 │    │                 │    │                 │
 │ • Landing Page  │    │ • AI Agent      │    │ • Purchase Hist.│    │ • Firestore     │
 │ • Chat Interface│    │ • CRM Lookup    │    │ • Support Cases │    │ • Cloud Run     │
 │ • Email Forms   │    │ • Email Proc.   │    │ • Email Workfl. │    │ • SendGrid API  │
 └─────────────────┘    └─────────────────┘    └─────────────────┘    │ • Twilio API    │
+                                                                     │ • Frappe HR     │
+                                                                     │ • ERPNext       │
                                                                      └─────────────────┘
 ```
 
@@ -405,9 +409,12 @@ const fieldMapping = {
 - **AI Agent ↔ SuiteCRM**: Real-time customer lookups during phone conversations
 - **Phone Support ↔ CRM**: Automatic ticket creation and customer context retrieval
 - **Web Forms ↔ CRM**: Seamless lead capture and customer record creation
-- **Email Processing ↔ AI Agent**: AI-powered email responses with customer context *(Future Integration)*
-- **CRM Workflows ↔ Email**: Automated email notifications and campaigns *(Future Integration)*
+- **Email Processing ↔ AI Agent**: AI-powered email responses with customer context ✅ **Implemented**
+- **CRM Workflows ↔ Email**: Automated email notifications and campaigns ✅ **Implemented**
 - **Customer Data ↔ Email**: Email addresses as customer identifiers across all systems
+- **HR Portal ↔ CRM**: Employee data synchronization between Frappe HR and SuiteCRM
+- **ERP Portal ↔ CRM**: Business data synchronization between ERPNext and SuiteCRM
+- **ERP Portal ↔ HR**: Employee and payroll data integration between ERPNext and Frappe HR
 
 ## 🛠️ Infrastructure
 
@@ -416,7 +423,7 @@ const fieldMapping = {
 | Service | Purpose | Configuration |
 |---------|---------|---------------|
 | **Cloud Run** | Serverless backend | Auto-scaling Node.js API & SuiteCRM |
-| **Cloud SQL** | PostgreSQL database | SuiteCRM customer data storage |
+| **Cloud SQL** | MySQL database | SuiteCRM, Frappe HR, and ERPNext data storage |
 | **Firestore** | NoSQL database | Conversation & ticket storage |
 | **Vertex AI** | Conversational AI | Gemini 2.5 Flash for natural language processing |
 | **Twilio API** | Phone integration | Voice/SMS handling & number provisioning |
@@ -439,10 +446,12 @@ const fieldMapping = {
 - Custom MCP server for SuiteCRM integration
 
 **Business Applications** *(New - Fully Automated)*:
-- ✅ **Cloud SQL PostgreSQL** for SuiteCRM database
+- ✅ **Cloud SQL MySQL** for SuiteCRM, Frappe HR, and ERPNext databases
 - ✅ **Cloud Run service** for SuiteCRM application
-- ✅ **Load Balancer** for subdomain routing (`crm.yourdomain.com`)
-- ✅ **SSL Certificates** for custom domain security
+- ✅ **Cloud Run service** for Frappe HR application
+- ✅ **Cloud Run service** for ERPNext application
+- ✅ **Load Balancer** for subdomain routing (`crm.yourdomain.com`, `hr.yourdomain.com`, `erp.yourdomain.com`)
+- ✅ **SSL Certificates** for custom domain security (`yourbusiness.com`, `crm.yourbusiness.com`, `hr.yourbusiness.com`, `erp.yourbusiness.com`)
 
 **Communication Services**:
 - Twilio API for phone number provisioning and telephony
@@ -562,14 +571,14 @@ const personalizedResponse = await geminiFlash.generateResponse({
 
 **Database Integration:**
 ```php
-// SuiteCRM config.php for Google Cloud SQL PostgreSQL
+// SuiteCRM config.php for Google Cloud SQL MySQL
 $sugar_config['dbconfig'] = array(
-    'db_type' => 'pgsql',
-    'db_host_name' => 'your-cloud-sql-ip:5432',
+    'db_type' => 'mysqli',
+    'db_host_name' => 'your-cloud-sql-ip:3306',
     'db_user_name' => 'suitecrm_user',
     'db_password' => 'secure_password',
     'db_name' => 'suitecrm_db',
-    'db_manager' => 'pg',
+    'db_manager' => 'mysql',
 );
 ```
 
@@ -1274,14 +1283,14 @@ mailchimp_list_id = "your-mailchimp-audience-id"
    - Update terraform.tfvars with phone number and Twilio credentials
 
 4. **SuiteCRM Database Setup** *(Automated)*
-   - PostgreSQL instance automatically created via Terraform
+   - MySQL 8.0 instance automatically created via Terraform
    - Database and user provisioning handled automatically
    - Credentials stored securely in Secret Manager
    - Network access configured for VPC connectivity
 
 5. **Custom Domain Configuration** *(Automated)*
    - Load balancer automatically configured for subdomain routing
-   - SSL certificates automatically provisioned for `yourbusiness.com` and `crm.yourbusiness.com`
+   - SSL certificates automatically provisioned for `yourbusiness.com`, `crm.yourbusiness.com`, `hr.yourbusiness.com`, and `erp.yourbusiness.com`
    - DNS configuration: Point your domain to the load balancer IP address
 
 6. **SendGrid API Setup** *(Manual - for email support)*
@@ -1378,6 +1387,16 @@ mailchimp_list_id = "your-mailchimp-audience-id"
 - Verify SSL certificate is properly configured for crm.yourdomain.com
 - Check that SuiteCRM service is running: `terraform output suitecrm_service_url`
 - Confirm admin password is correctly set in Terraform variables
+
+**Frappe HR Access Issues**
+- Verify SSL certificate is properly configured for hr.yourdomain.com
+- Check that Frappe HR service is running: `terraform output frappe_hr_url`
+- Confirm admin password is correctly set in Terraform variables
+
+**ERPNext Access Issues**
+- Verify SSL certificate is properly configured for erp.yourdomain.com
+- Check that ERPNext service is running: `terraform output erpnext_url`
+- Confirm admin password is correctly set in Terraform variables
 - Access logs available in Google Cloud Console → Cloud Run → Logs
 
 **Email Integration Issues**
@@ -1412,4 +1431,4 @@ For support and questions:
 
 **Complete Multi-Channel Business Infrastructure**: Fully automated deployment of AI-powered customer support across phone, SMS, web chat, and email with integrated CRM for seamless business acquisition and customer retention.
 
-**Built with ❤️ using Google Cloud Platform, Vertex AI (Gemini 2.5 Flash), OpenAI (Whisper), ElevenLabs (TTS), SuiteCRM (MCP Integration), PostgreSQL, Twilio API, SendGrid API, and modern web technologies.**
+**Built with ❤️ using Google Cloud Platform, Vertex AI (Gemini 2.5 Flash), OpenAI (Whisper), ElevenLabs (TTS), SuiteCRM (MCP Integration), MySQL 8.0, Twilio API, SendGrid API, and modern web technologies.**
