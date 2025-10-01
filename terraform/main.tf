@@ -82,8 +82,8 @@ resource "google_firestore_database" "main" {
 
 # Cloud SQL MySQL for SuiteCRM
 resource "google_sql_database_instance" "suitecrm_db" {
-  name             = "${var.environment}-suitecrm-mysql"
-  database_version = "MYSQL_8_0"
+  name             = "${var.environment}-suitecrm-postgres"
+  database_version = "POSTGRES_15"
   region           = var.region
 
   settings {
@@ -121,75 +121,7 @@ resource "google_sql_user" "suitecrm" {
   password = var.suitecrm_db_password
 }
 
-# Cloud SQL MySQL for Frappe HR
-resource "google_sql_database_instance" "frappe_hr_db" {
-  name             = "${var.environment}-frappe-hr-mysql"
-  database_version = "MYSQL_8_0"
-  region           = var.region
 
-  settings {
-    tier = "db-f1-micro"
-
-    disk_size = 10
-
-    ip_configuration {
-      ipv4_enabled    = false
-      private_network = google_compute_network.main.id
-    }
-
-    backup_configuration {
-      enabled = true
-    }
-  }
-
-  deletion_protection = false
-}
-
-resource "google_sql_database" "frappe_hr" {
-  name     = "frappe_hr"
-  instance = google_sql_database_instance.frappe_hr_db.name
-}
-
-resource "google_sql_user" "frappe_hr" {
-  name     = "frappe_hr"
-  instance = google_sql_database_instance.frappe_hr_db.name
-  password = var.frappe_hr_db_password
-}
-
-# Cloud SQL MySQL for ERPNext
-resource "google_sql_database_instance" "erpnext_db" {
-  name             = "${var.environment}-erpnext-mysql"
-  database_version = "MYSQL_8_0"
-  region           = var.region
-
-  settings {
-    tier = "db-f1-micro"
-
-    disk_size = 10
-
-    ip_configuration {
-      ipv4_enabled    = false
-      private_network = google_compute_network.main.id
-    }
-
-    backup_configuration {
-      enabled = true
-    }
-  }
-
-  deletion_protection = false
-}
-
-resource "google_sql_database" "erpnext" {
-  name     = "erpnext"
-  instance = google_sql_database_instance.erpnext_db.name
-}
-
-resource "google_sql_user" "erpnext" {
-  name     = "erpnext"
-  instance = google_sql_database_instance.erpnext_db.name
-  password = var.erpnext_db_password
-}
 
 # Storage Bucket for static assets
 resource "google_storage_bucket" "frontend_assets" {
@@ -284,7 +216,7 @@ resource "google_cloud_run_service" "suitecrm" {
         }
         env {
           name  = "SUITECRM_DB_PORT"
-          value = "3306"
+          value = "5432"
         }
         env {
           name  = "SUITECRM_DB_NAME"
@@ -333,149 +265,8 @@ resource "google_cloud_run_service_iam_policy" "ai_agent_noauth" {
   policy_data = data.google_iam_policy.noauth.policy_data
 }
 
-# Cloud Run Service for Frappe HR
-resource "google_cloud_run_service" "frappe_hr" {
-  name     = "${var.environment}-frappe-hr"
-  location = var.region
 
-  template {
-    spec {
-      service_account_name = google_service_account.cloud_run_sa.email
-      containers {
-        image = "gcr.io/${var.project_id}/${var.environment}-frappe-hr:latest"
-        ports {
-          container_port = 8000
-        }
-        env {
-          name  = "DB_HOST"
-          value = google_sql_database_instance.frappe_hr_db.private_ip_address
-        }
-        env {
-          name  = "DB_PORT"
-          value = "3306"
-        }
-        env {
-          name  = "DB_NAME"
-          value = google_sql_database.frappe_hr.name
-        }
-        env {
-          name  = "DB_USER"
-          value = google_sql_user.frappe_hr.name
-        }
-        env {
-          name  = "DB_PASSWORD"
-          value_from {
-            secret_key_ref {
-              name = google_secret_manager_secret.frappe_hr_db_password.secret_id
-              key  = "latest"
-            }
-          }
-        }
-        env {
-          name  = "ADMIN_PASSWORD"
-          value_from {
-            secret_key_ref {
-              name = google_secret_manager_secret.frappe_hr_admin_password.secret_id
-              key  = "latest"
-            }
-          }
-        }
-        env {
-          name  = "FRAPPE_SITE"
-          value = "hr.localhost"
-        }
-      }
-    }
-  }
 
-  traffic {
-    percent         = 100
-    latest_revision = true
-  }
-
-  depends_on = [google_secret_manager_secret_iam_member.frappe_hr_secret_accessor]
-}
-
-# Cloud Run Service for ERPNext
-resource "google_cloud_run_service" "erpnext" {
-  name     = "${var.environment}-erpnext"
-  location = var.region
-
-  template {
-    spec {
-      service_account_name = google_service_account.cloud_run_sa.email
-      containers {
-        image = "gcr.io/${var.project_id}/${var.environment}-erpnext:latest"
-        ports {
-          container_port = 8000
-        }
-        env {
-          name  = "DB_HOST"
-          value = google_sql_database_instance.erpnext_db.private_ip_address
-        }
-        env {
-          name  = "DB_PORT"
-          value = "3306"
-        }
-        env {
-          name  = "DB_NAME"
-          value = google_sql_database.erpnext.name
-        }
-        env {
-          name  = "DB_USER"
-          value = google_sql_user.erpnext.name
-        }
-        env {
-          name  = "DB_PASSWORD"
-          value_from {
-            secret_key_ref {
-              name = google_secret_manager_secret.erpnext_db_password.secret_id
-              key  = "latest"
-            }
-          }
-        }
-        env {
-          name  = "ADMIN_PASSWORD"
-          value_from {
-            secret_key_ref {
-              name = google_secret_manager_secret.erpnext_admin_password.secret_id
-              key  = "latest"
-            }
-          }
-        }
-        env {
-          name  = "FRAPPE_SITE"
-          value = "erpnext.localhost"
-        }
-      }
-    }
-  }
-
-  traffic {
-    percent         = 100
-    latest_revision = true
-  }
-
-  depends_on = [google_secret_manager_secret_iam_member.erpnext_secret_accessor]
-}
-
-# IAM policy for ERPNext Cloud Run
-resource "google_cloud_run_service_iam_policy" "erpnext_noauth" {
-  location = google_cloud_run_service.erpnext.location
-  project  = google_cloud_run_service.erpnext.project
-  service  = google_cloud_run_service.erpnext.name
-
-  policy_data = data.google_iam_policy.noauth.policy_data
-}
-
-# IAM policy for Frappe HR Cloud Run
-resource "google_cloud_run_service_iam_policy" "frappe_hr_noauth" {
-  location = google_cloud_run_service.frappe_hr.location
-  project  = google_cloud_run_service.frappe_hr.project
-  service  = google_cloud_run_service.frappe_hr.name
-
-  policy_data = data.google_iam_policy.noauth.policy_data
-}
 
 # IAM policy for SuiteCRM Cloud Run
 resource "google_cloud_run_service_iam_policy" "suitecrm_noauth" {
@@ -594,33 +385,6 @@ resource "google_secret_manager_secret" "mailchimp_list_id" {
   }
 }
 
-resource "google_secret_manager_secret" "frappe_hr_db_password" {
-  secret_id = "${var.environment}-frappe-hr-db-password"
-  replication {
-    auto {}
-  }
-}
-
-resource "google_secret_manager_secret" "frappe_hr_admin_password" {
-  secret_id = "${var.environment}-frappe-hr-admin-password"
-  replication {
-    auto {}
-  }
-}
-
-resource "google_secret_manager_secret" "erpnext_db_password" {
-  secret_id = "${var.environment}-erpnext-db-password"
-  replication {
-    auto {}
-  }
-}
-
-resource "google_secret_manager_secret" "erpnext_admin_password" {
-  secret_id = "${var.environment}-erpnext-admin-password"
-  replication {
-    auto {}
-  }
-}
 
 resource "google_secret_manager_secret_version" "openai_api_key" {
   secret      = google_secret_manager_secret.openai_api_key.name
@@ -692,25 +456,6 @@ resource "google_secret_manager_secret_version" "mailchimp_list_id" {
   secret_data = var.mailchimp_list_id
 }
 
-resource "google_secret_manager_secret_version" "frappe_hr_db_password" {
-  secret      = google_secret_manager_secret.frappe_hr_db_password.name
-  secret_data = var.frappe_hr_db_password
-}
-
-resource "google_secret_manager_secret_version" "frappe_hr_admin_password" {
-  secret      = google_secret_manager_secret.frappe_hr_admin_password.name
-  secret_data = var.frappe_hr_admin_password
-}
-
-resource "google_secret_manager_secret_version" "erpnext_db_password" {
-  secret      = google_secret_manager_secret.erpnext_db_password.name
-  secret_data = var.erpnext_db_password
-}
-
-resource "google_secret_manager_secret_version" "erpnext_admin_password" {
-  secret      = google_secret_manager_secret.erpnext_admin_password.name
-  secret_data = var.erpnext_admin_password
-}
 
 # IAM for Secret Manager access
 resource "google_secret_manager_secret_iam_member" "ai_agent_secret_accessor" {
@@ -791,17 +536,6 @@ resource "google_secret_manager_secret_iam_member" "mailchimp_list_id_accessor" 
   member    = "serviceAccount:${google_service_account.cloud_run_sa.email}"
 }
 
-resource "google_secret_manager_secret_iam_member" "frappe_hr_secret_accessor" {
-  secret_id = google_secret_manager_secret.frappe_hr_db_password.secret_id
-  role      = "roles/secretmanager.secretAccessor"
-  member    = "serviceAccount:${google_service_account.cloud_run_sa.email}"
-}
-
-resource "google_secret_manager_secret_iam_member" "erpnext_secret_accessor" {
-  secret_id = google_secret_manager_secret.erpnext_db_password.secret_id
-  role      = "roles/secretmanager.secretAccessor"
-  member    = "serviceAccount:${google_service_account.cloud_run_sa.email}"
-}
 
 # Cloud SQL IAM permissions for SuiteCRM
 resource "google_project_iam_member" "suitecrm_cloud_sql" {
@@ -861,27 +595,6 @@ resource "google_compute_backend_service" "suitecrm_backend" {
   health_checks = [google_compute_health_check.default.id]
 }
 
-resource "google_compute_backend_service" "frappe_hr_backend" {
-  name      = "${var.environment}-frappe-hr-backend"
-  protocol  = "HTTP"
-
-  backend {
-    group = google_compute_region_network_endpoint_group.frappe_hr_neg.id
-  }
-
-  health_checks = [google_compute_health_check.default.id]
-}
-
-resource "google_compute_backend_service" "erpnext_backend" {
-  name      = "${var.environment}-erpnext-backend"
-  protocol  = "HTTP"
-
-  backend {
-    group = google_compute_region_network_endpoint_group.erpnext_neg.id
-  }
-
-  health_checks = [google_compute_health_check.default.id]
-}
 
 resource "google_compute_region_network_endpoint_group" "ai_agent_neg" {
   name                  = "${var.environment}-ai-agent-neg"
@@ -901,23 +614,6 @@ resource "google_compute_region_network_endpoint_group" "suitecrm_neg" {
   }
 }
 
-resource "google_compute_region_network_endpoint_group" "frappe_hr_neg" {
-  name                  = "${var.environment}-frappe-hr-neg"
-  network_endpoint_type = "SERVERLESS"
-  region                = var.region
-  cloud_run {
-    service = google_cloud_run_service.frappe_hr.name
-  }
-}
-
-resource "google_compute_region_network_endpoint_group" "erpnext_neg" {
-  name                  = "${var.environment}-erpnext-neg"
-  network_endpoint_type = "SERVERLESS"
-  region                = var.region
-  cloud_run {
-    service = google_cloud_run_service.erpnext.name
-  }
-}
 
 
 # Health check for load balancer
@@ -934,7 +630,7 @@ resource "google_compute_managed_ssl_certificate" "default" {
   name = "${var.environment}-ssl-cert"
 
   managed {
-    domains = [var.domain_name, "crm.${var.domain_name}", "hr.${var.domain_name}", "erp.${var.domain_name}"]
+    domains = [var.domain_name, "crm.${var.domain_name}"]
   }
 }
 
@@ -949,16 +645,6 @@ resource "google_compute_url_map" "default" {
   }
 
   host_rule {
-    hosts        = ["hr.${var.domain_name}"]
-    path_matcher = "hr"
-  }
-
-  host_rule {
-    hosts        = ["erp.${var.domain_name}"]
-    path_matcher = "erp"
-  }
-
-  host_rule {
     hosts        = [var.domain_name]
     path_matcher = "main"
   }
@@ -966,16 +652,6 @@ resource "google_compute_url_map" "default" {
   path_matcher {
     name            = "crm"
     default_service = google_compute_backend_service.suitecrm_backend.id
-  }
-
-  path_matcher {
-    name            = "hr"
-    default_service = google_compute_backend_service.frappe_hr_backend.id
-  }
-
-  path_matcher {
-    name            = "erp"
-    default_service = google_compute_backend_service.erpnext_backend.id
   }
 
   path_matcher {
@@ -1025,13 +701,6 @@ output "suitecrm_url" {
   value = google_cloud_run_service.suitecrm.status[0].url
 }
 
-output "frappe_hr_url" {
-  value = google_cloud_run_service.frappe_hr.status[0].url
-}
-
-output "erpnext_url" {
-  value = google_cloud_run_service.erpnext.status[0].url
-}
 
 output "load_balancer_ip" {
   value = google_compute_global_address.default.address

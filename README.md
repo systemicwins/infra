@@ -35,10 +35,10 @@ This platform provides a complete customer support solution for businesses with:
 **Fully Automated Deployment**: When you run `terraform apply`, this infrastructure automatically provisions:
 
 - ✅ **AI Customer Support**: Gemini 2.5 Flash with phone and chat integration
-- ✅ **CRM System**: SuiteCRM with MySQL database (`crm.yourdomain.com`)
+- ✅ **CRM System**: SuiteCRM with PostgreSQL database (`crm.yourdomain.com`)
 - ✅ **Load Balancing**: Subdomain routing for seamless service access
 - ✅ **SSL Security**: Automatic certificate management for custom domains
-- ✅ **Database Integration**: MySQL 8.0 with automated backups and scaling
+- ✅ **Database Integration**: PostgreSQL with automated backups and scaling
 
 ### Subdomain Architecture
 
@@ -46,8 +46,6 @@ When deployed with a custom domain (e.g., `yourbusiness.com`):
 
 - **Main Site**: `yourbusiness.com` - Landing page and support interface
 - **CRM Portal**: `crm.yourbusiness.com` - SuiteCRM customer management
-- **HR Portal**: `hr.yourbusiness.com` - Frappe HR employee management
-- **ERP Portal**: `erp.yourbusiness.com` - ERPNext business management
 - **API Endpoints**: Integrated across services for seamless data flow
 
 ### 💼 Why CRM Integration Matters for Business Acquisition
@@ -91,6 +89,132 @@ When acquiring a new business, **immediate access to customer data and support i
    - Opportunity creation from qualified leads
 
 **Implementation Timeline:** 2-4 weeks for complete sales pipeline automation.
+
+## 🔗 Third-Party System Integration for Acquisitions
+
+### Merge.dev Integration for Seamless Acquisitions
+
+When acquiring an existing business, **immediate integration with their existing systems** is crucial for maintaining operational continuity and customer experience. Merge.dev provides a unified API platform that simplifies this process:
+
+#### **Why Merge.dev for Acquisitions:**
+
+**Unified API Access:**
+- **Single Integration Point**: Connect to 200+ business applications through one API
+- **Standardized Data Models**: Consistent data structures across different systems
+- **Real-time Sync**: Live data synchronization without custom development
+
+**Supported Systems:**
+- **HR/Payroll**: Gusto, ADP, Paychex, BambooHR, Workday
+- **CRM**: Salesforce, HubSpot, Pipedrive, Zoho CRM
+- **Accounting**: QuickBooks, Xero, NetSuite, Sage
+- **E-commerce**: Shopify, WooCommerce, BigCommerce
+- **Communication**: Slack, Microsoft Teams, Gmail
+
+#### **Acquisition Integration Workflow:**
+
+```typescript
+// Example: Import customer data from acquired company's CRM
+const importAcquiredCustomers = async (sourceSystem: string) => {
+  // 1. Connect to source system via Merge.dev
+  const mergeClient = new MergeClient({
+    apiKey: process.env.MERGE_API_KEY,
+    accountToken: sourceSystemToken
+  });
+
+  // 2. Retrieve customer data
+  const customers = await mergeClient.crm.contacts.list({
+    includeRemoteData: true
+  });
+
+  // 3. Transform and import to SuiteCRM
+  for (const customer of customers) {
+    await suiteCRM.createContact({
+      first_name: customer.firstName,
+      last_name: customer.lastName,
+      email: customer.emailAddresses[0]?.emailAddress,
+      phone: customer.phoneNumbers[0]?.phoneNumber,
+      source: `acquired_${sourceSystem}`,
+      // Map additional fields as needed
+    });
+  }
+
+  return { imported: customers.length };
+};
+```
+
+#### **Payroll System Integration:**
+
+**For Acquired Companies with Existing Payroll:**
+```typescript
+// Example: Sync employee payroll data from acquired company's system
+const syncPayrollData = async (acquiredCompanyId: string) => {
+  // Connect to acquired company's payroll system
+  const payrollData = await mergeClient.hris.employees.list({
+    companyId: acquiredCompanyId,
+    includeRemoteData: true
+  });
+
+  // Import payroll records to maintain continuity
+  for (const employee of payrollData) {
+    await payrollSystem.importEmployee({
+      employeeId: employee.id,
+      name: `${employee.firstName} ${employee.lastName}`,
+      payRate: employee.compensations[0]?.rate,
+      payFrequency: employee.compensations[0]?.payPeriod,
+      // Preserve existing payroll history
+    });
+  }
+};
+```
+
+#### **Integration Benefits for Acquisitions:**
+
+**Operational Continuity:**
+- **Zero Downtime**: Existing systems continue running during transition
+- **Data Preservation**: All historical customer and employee data maintained
+- **Process Continuity**: Payroll, invoicing, and customer service uninterrupted
+
+**Risk Mitigation:**
+- **Compliance Maintenance**: Tax withholding and reporting obligations met
+- **Employee Retention**: Familiar systems reduce acquisition-related stress
+- **Customer Experience**: Seamless support during ownership transition
+
+**Technical Advantages:**
+- **No Vendor Lock-in**: Easy migration path if needed later
+- **Scalable Integration**: Works with systems of any size
+- **API-First Architecture**: Reliable, documented integration points
+
+#### **Implementation for Acquisitions:**
+
+1. **Assessment Phase** (Week 1)
+   ```bash
+   # Identify existing systems
+   merge discover-systems --company-id acquired-company-123
+
+   # Map data structures
+   merge schema-inspect --system-type gusto
+   ```
+
+2. **Integration Phase** (Week 2-3)
+   ```typescript
+   // Set up secure connection
+   const integration = await mergeClient.integrations.create({
+     category: 'hris',
+     provider: 'gusto',
+     credentials: acquiredCompanyCredentials
+   });
+   ```
+
+3. **Data Migration** (Week 3-4)
+   ```typescript
+   // Migrate customers to SuiteCRM
+   await migrateCustomers(integration.id, 'suitecrm');
+
+   // Migrate employees to HR system
+   await migrateEmployees(integration.id, 'frappe-hr');
+   ```
+
+**Result**: Acquired businesses maintain full operational capability while gaining access to AI-powered support and modern CRM infrastructure.
 
 ## 📧 Email Infrastructure Integration
 
@@ -393,15 +517,13 @@ const fieldMapping = {
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │   Frontend      │    │   Backend API   │    │   SuiteCRM      │    │  Google Cloud   │
-│   (Svelte)      │◄──►│   (Node.js)     │◄──►│   (MySQL 8.0)   │◄──►│  Services       │
+│   (Svelte)      │◄──►│   (Node.js)     │◄──►│   (PostgreSQL)  │◄──►│  Services       │
 │                 │    │                 │    │                 │    │                 │
 │ • Landing Page  │    │ • AI Agent      │    │ • Purchase Hist.│    │ • Firestore     │
 │ • Chat Interface│    │ • CRM Lookup    │    │ • Support Cases │    │ • Cloud Run     │
 │ • Email Forms   │    │ • Email Proc.   │    │ • Email Workfl. │    │ • SendGrid API  │
 └─────────────────┘    └─────────────────┘    └─────────────────┘    │ • Twilio API    │
-                                                                     │ • Frappe HR     │
-                                                                     │ • ERPNext       │
-                                                                     └─────────────────┘
+                                                              └─────────────────┘
 ```
 
 ### Service Integration
@@ -412,9 +534,6 @@ const fieldMapping = {
 - **Email Processing ↔ AI Agent**: AI-powered email responses with customer context ✅ **Implemented**
 - **CRM Workflows ↔ Email**: Automated email notifications and campaigns ✅ **Implemented**
 - **Customer Data ↔ Email**: Email addresses as customer identifiers across all systems
-- **HR Portal ↔ CRM**: Employee data synchronization between Frappe HR and SuiteCRM
-- **ERP Portal ↔ CRM**: Business data synchronization between ERPNext and SuiteCRM
-- **ERP Portal ↔ HR**: Employee and payroll data integration between ERPNext and Frappe HR
 
 ## 🛠️ Infrastructure
 
@@ -423,7 +542,7 @@ const fieldMapping = {
 | Service | Purpose | Configuration |
 |---------|---------|---------------|
 | **Cloud Run** | Serverless backend | Auto-scaling Node.js API & SuiteCRM |
-| **Cloud SQL** | MySQL database | SuiteCRM, Frappe HR, and ERPNext data storage |
+| **Cloud SQL** | PostgreSQL database | SuiteCRM data storage |
 | **Firestore** | NoSQL database | Conversation & ticket storage |
 | **Vertex AI** | Conversational AI | Gemini 2.5 Flash for natural language processing |
 | **Twilio API** | Phone integration | Voice/SMS handling & number provisioning |
@@ -445,13 +564,11 @@ const fieldMapping = {
 - Vertex AI Gemini 2.5 Flash for conversational AI
 - Custom MCP server for SuiteCRM integration
 
-**Business Applications** *(New - Fully Automated)*:
-- ✅ **Cloud SQL MySQL** for SuiteCRM, Frappe HR, and ERPNext databases
+**Business Applications** *(Fully Automated)*:
+- ✅ **Cloud SQL PostgreSQL** for SuiteCRM database
 - ✅ **Cloud Run service** for SuiteCRM application
-- ✅ **Cloud Run service** for Frappe HR application
-- ✅ **Cloud Run service** for ERPNext application
-- ✅ **Load Balancer** for subdomain routing (`crm.yourdomain.com`, `hr.yourdomain.com`, `erp.yourdomain.com`)
-- ✅ **SSL Certificates** for custom domain security (`yourbusiness.com`, `crm.yourbusiness.com`, `hr.yourbusiness.com`, `erp.yourbusiness.com`)
+- ✅ **Load Balancer** for subdomain routing (`crm.yourdomain.com`)
+- ✅ **SSL Certificates** for custom domain security (`yourbusiness.com`, `crm.yourbusiness.com`)
 
 **Communication Services**:
 - Twilio API for phone number provisioning and telephony
@@ -571,14 +688,14 @@ const personalizedResponse = await geminiFlash.generateResponse({
 
 **Database Integration:**
 ```php
-// SuiteCRM config.php for Google Cloud SQL MySQL
+// SuiteCRM config.php for Google Cloud SQL PostgreSQL
 $sugar_config['dbconfig'] = array(
-    'db_type' => 'mysqli',
-    'db_host_name' => 'your-cloud-sql-ip:3306',
+    'db_type' => 'pgsql',
+    'db_host_name' => 'your-cloud-sql-ip:5432',
     'db_user_name' => 'suitecrm_user',
     'db_password' => 'secure_password',
     'db_name' => 'suitecrm_db',
-    'db_manager' => 'mysql',
+    'db_manager' => 'pg',
 );
 ```
 
@@ -1283,14 +1400,14 @@ mailchimp_list_id = "your-mailchimp-audience-id"
    - Update terraform.tfvars with phone number and Twilio credentials
 
 4. **SuiteCRM Database Setup** *(Automated)*
-   - MySQL 8.0 instance automatically created via Terraform
+   - PostgreSQL instance automatically created via Terraform
    - Database and user provisioning handled automatically
    - Credentials stored securely in Secret Manager
    - Network access configured for VPC connectivity
 
 5. **Custom Domain Configuration** *(Automated)*
    - Load balancer automatically configured for subdomain routing
-   - SSL certificates automatically provisioned for `yourbusiness.com`, `crm.yourbusiness.com`, `hr.yourbusiness.com`, and `erp.yourbusiness.com`
+   - SSL certificates automatically provisioned for `yourbusiness.com` and `crm.yourbusiness.com`
    - DNS configuration: Point your domain to the load balancer IP address
 
 6. **SendGrid API Setup** *(Manual - for email support)*
@@ -1388,15 +1505,6 @@ mailchimp_list_id = "your-mailchimp-audience-id"
 - Check that SuiteCRM service is running: `terraform output suitecrm_service_url`
 - Confirm admin password is correctly set in Terraform variables
 
-**Frappe HR Access Issues**
-- Verify SSL certificate is properly configured for hr.yourdomain.com
-- Check that Frappe HR service is running: `terraform output frappe_hr_url`
-- Confirm admin password is correctly set in Terraform variables
-
-**ERPNext Access Issues**
-- Verify SSL certificate is properly configured for erp.yourdomain.com
-- Check that ERPNext service is running: `terraform output erpnext_url`
-- Confirm admin password is correctly set in Terraform variables
 - Access logs available in Google Cloud Console → Cloud Run → Logs
 
 **Email Integration Issues**
@@ -1431,4 +1539,4 @@ For support and questions:
 
 **Complete Multi-Channel Business Infrastructure**: Fully automated deployment of AI-powered customer support across phone, SMS, web chat, and email with integrated CRM for seamless business acquisition and customer retention.
 
-**Built with ❤️ using Google Cloud Platform, Vertex AI (Gemini 2.5 Flash), OpenAI (Whisper), ElevenLabs (TTS), SuiteCRM (MCP Integration), MySQL 8.0, Twilio API, SendGrid API, and modern web technologies.**
+**Built with ❤️ using Google Cloud Platform, Vertex AI (Gemini 2.5 Flash), OpenAI (Whisper), ElevenLabs (TTS), SuiteCRM (MCP Integration), PostgreSQL, Twilio API, SendGrid API, and modern web technologies.**

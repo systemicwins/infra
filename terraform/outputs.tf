@@ -38,15 +38,6 @@ output "suitecrm_service_url" {
   value       = google_cloud_run_service.suitecrm.status[0].url
 }
 
-output "frappe_hr_service_url" {
-  description = "URL of the Cloud Run Frappe HR service"
-  value       = google_cloud_run_service.frappe_hr.status[0].url
-}
-
-output "erpnext_service_url" {
-  description = "URL of the Cloud Run ERPNext service"
-  value       = google_cloud_run_service.erpnext.status[0].url
-}
 
 output "load_balancer_ip_address" {
   description = "IP address of the load balancer for custom domains"
@@ -54,19 +45,10 @@ output "load_balancer_ip_address" {
 }
 
 output "cloud_sql_instance_name" {
-  description = "Name of the Cloud SQL MySQL instance for SuiteCRM"
+  description = "Name of the Cloud SQL PostgreSQL instance for SuiteCRM"
   value       = google_sql_database_instance.suitecrm_db.name
 }
 
-output "frappe_hr_sql_instance_name" {
-  description = "Name of the Cloud SQL MySQL instance for Frappe HR"
-  value       = google_sql_database_instance.frappe_hr_db.name
-}
-
-output "erpnext_sql_instance_name" {
-  description = "Name of the Cloud SQL MySQL instance for ERPNext"
-  value       = google_sql_database_instance.erpnext_db.name
-}
 
 output "suitecrm_database_name" {
   description = "Name of the SuiteCRM database"

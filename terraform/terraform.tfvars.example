@@ -34,13 +34,6 @@ mailchimp_api_key = "your-mailchimp-api-key"
 mailchimp_server_prefix = "us1"  # e.g., "us1", "us2", etc.
 mailchimp_list_id = "your-mailchimp-audience-id"
 
-# Frappe HR Configuration (for HR management)
-frappe_hr_db_password = "your-frappe-hr-db-password"
-frappe_hr_admin_password = "your-frappe-hr-admin-password"
-
-# ERPNext Configuration (for ERP system)
-erpnext_db_password = "your-erpnext-db-password"
-erpnext_admin_password = "your-erpnext-admin-password"
 
 # Note: To enable email support, you need to:
 # 1. Create a SendGrid account at sendgrid.com
