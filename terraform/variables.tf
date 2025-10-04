@@ -44,17 +44,6 @@ variable "openai_api_key" {
   sensitive   = true
 }
 
-variable "suitecrm_db_password" {
-  description = "SuiteCRM database password"
-  type        = string
-  sensitive   = true
-}
-
-variable "suitecrm_admin_password" {
-  description = "SuiteCRM admin password"
-  type        = string
-  sensitive   = true
-}
 
 variable "gmail_client_id" {
   description = "Gmail API client ID for email integration"

@@ -80,46 +80,6 @@ resource "google_firestore_database" "main" {
   app_engine_integration_mode = "DISABLED"
 }
 
-# Cloud SQL MySQL for SuiteCRM
-resource "google_sql_database_instance" "suitecrm_db" {
-  name             = "${var.environment}-suitecrm-postgres"
-  database_version = "POSTGRES_15"
-  region           = var.region
-
-  settings {
-    tier = "db-f1-micro"
-    disk_size = 10
-
-    database_flags {
-      name  = "max_connections"
-      value = "100"
-    }
-
-    ip_configuration {
-      ipv4_enabled = false
-      private_network = google_compute_network.main.id
-    }
-
-    backup_configuration {
-      enabled = true
-    }
-  }
-
-  deletion_protection = false
-}
-
-# SuiteCRM Database
-resource "google_sql_database" "suitecrm" {
-  name     = "suitecrm"
-  instance = google_sql_database_instance.suitecrm_db.name
-}
-
-# SuiteCRM Database User
-resource "google_sql_user" "suitecrm" {
-  name     = "suitecrm"
-  instance = google_sql_database_instance.suitecrm_db.name
-  password = var.suitecrm_db_password
-}
 
 
 
@@ -197,64 +157,6 @@ resource "google_cloud_run_service" "ai_agent" {
   depends_on = [google_secret_manager_secret_iam_member.ai_agent_secret_accessor]
 }
 
-# Cloud Run Service for SuiteCRM
-resource "google_cloud_run_service" "suitecrm" {
-  name     = "${var.environment}-suitecrm"
-  location = var.region
-
-  template {
-    spec {
-      service_account_name = google_service_account.cloud_run_sa.email
-      containers {
-        image = "gcr.io/${var.project_id}/${var.environment}-suitecrm:latest"
-        ports {
-          container_port = 80
-        }
-        env {
-          name  = "SUITECRM_DB_HOST"
-          value = google_sql_database_instance.suitecrm_db.private_ip_address
-        }
-        env {
-          name  = "SUITECRM_DB_PORT"
-          value = "5432"
-        }
-        env {
-          name  = "SUITECRM_DB_NAME"
-          value = google_sql_database.suitecrm.name
-        }
-        env {
-          name  = "SUITECRM_DB_USER"
-          value = google_sql_user.suitecrm.name
-        }
-        env {
-          name  = "SUITECRM_DB_PASSWORD"
-          value_from {
-            secret_key_ref {
-              name = google_secret_manager_secret.suitecrm_db_password.secret_id
-              key  = "latest"
-            }
-          }
-        }
-        env {
-          name  = "SUITECRM_ADMIN_PASSWORD"
-          value_from {
-            secret_key_ref {
-              name = google_secret_manager_secret.suitecrm_admin_password.secret_id
-              key  = "latest"
-            }
-          }
-        }
-      }
-    }
-  }
-
-  traffic {
-    percent         = 100
-    latest_revision = true
-  }
-
-  depends_on = [google_secret_manager_secret_iam_member.suitecrm_secret_accessor]
-}
 
 # IAM policy for AI Agent Cloud Run
 resource "google_cloud_run_service_iam_policy" "ai_agent_noauth" {
@@ -268,14 +170,6 @@ resource "google_cloud_run_service_iam_policy" "ai_agent_noauth" {
 
 
 
-# IAM policy for SuiteCRM Cloud Run
-resource "google_cloud_run_service_iam_policy" "suitecrm_noauth" {
-  location = google_cloud_run_service.suitecrm.location
-  project  = google_cloud_run_service.suitecrm.project
-  service  = google_cloud_run_service.suitecrm.name
-
-  policy_data = data.google_iam_policy.noauth.policy_data
-}
 
 data "google_iam_policy" "noauth" {
   binding {
@@ -301,19 +195,6 @@ resource "google_secret_manager_secret" "support_phone_number" {
   }
 }
 
-resource "google_secret_manager_secret" "suitecrm_db_password" {
-  secret_id = "${var.environment}-suitecrm-db-password"
-  replication {
-    auto {}
-  }
-}
-
-resource "google_secret_manager_secret" "suitecrm_admin_password" {
-  secret_id = "${var.environment}-suitecrm-admin-password"
-  replication {
-    auto {}
-  }
-}
 
 resource "google_secret_manager_secret" "gmail_client_id" {
   secret_id = "${var.environment}-gmail-client-id"
@@ -396,15 +277,6 @@ resource "google_secret_manager_secret_version" "support_phone_number" {
   secret_data = var.phone_number != null ? var.phone_number : "+15551234567"
 }
 
-resource "google_secret_manager_secret_version" "suitecrm_db_password" {
-  secret      = google_secret_manager_secret.suitecrm_db_password.name
-  secret_data = var.suitecrm_db_password
-}
-
-resource "google_secret_manager_secret_version" "suitecrm_admin_password" {
-  secret      = google_secret_manager_secret.suitecrm_admin_password.name
-  secret_data = var.suitecrm_admin_password
-}
 
 resource "google_secret_manager_secret_version" "gmail_client_id" {
   secret      = google_secret_manager_secret.gmail_client_id.name
@@ -470,11 +342,6 @@ resource "google_secret_manager_secret_iam_member" "support_phone_accessor" {
   member    = "serviceAccount:${google_service_account.cloud_run_sa.email}"
 }
 
-resource "google_secret_manager_secret_iam_member" "suitecrm_secret_accessor" {
-  secret_id = google_secret_manager_secret.suitecrm_db_password.secret_id
-  role      = "roles/secretmanager.secretAccessor"
-  member    = "serviceAccount:${google_service_account.cloud_run_sa.email}"
-}
 
 resource "google_secret_manager_secret_iam_member" "gmail_secret_accessor" {
   secret_id = google_secret_manager_secret.gmail_client_id.secret_id
@@ -537,12 +404,6 @@ resource "google_secret_manager_secret_iam_member" "mailchimp_list_id_accessor" 
 }
 
 
-# Cloud SQL IAM permissions for SuiteCRM
-resource "google_project_iam_member" "suitecrm_cloud_sql" {
-  project = var.project_id
-  role    = "roles/cloudsql.client"
-  member  = "serviceAccount:${google_service_account.cloud_run_sa.email}"
-}
 
 # Vertex AI IAM permissions for Gemini 2.5 Flash
 resource "google_project_iam_member" "vertex_ai_user" {
@@ -584,16 +445,6 @@ resource "google_compute_backend_service" "ai_agent_backend" {
   health_checks = [google_compute_health_check.default.id]
 }
 
-resource "google_compute_backend_service" "suitecrm_backend" {
-  name      = "${var.environment}-suitecrm-backend"
-  protocol  = "HTTP"
-
-  backend {
-    group = google_compute_region_network_endpoint_group.suitecrm_neg.id
-  }
-
-  health_checks = [google_compute_health_check.default.id]
-}
 
 
 resource "google_compute_region_network_endpoint_group" "ai_agent_neg" {
@@ -605,14 +456,6 @@ resource "google_compute_region_network_endpoint_group" "ai_agent_neg" {
   }
 }
 
-resource "google_compute_region_network_endpoint_group" "suitecrm_neg" {
-  name                  = "${var.environment}-suitecrm-neg"
-  network_endpoint_type = "SERVERLESS"
-  region                = var.region
-  cloud_run {
-    service = google_cloud_run_service.suitecrm.name
-  }
-}
 
 
 
@@ -630,7 +473,7 @@ resource "google_compute_managed_ssl_certificate" "default" {
   name = "${var.environment}-ssl-cert"
 
   managed {
-    domains = [var.domain_name, "crm.${var.domain_name}"]
+    domains = [var.domain_name]
   }
 }
 
@@ -640,18 +483,8 @@ resource "google_compute_url_map" "default" {
   default_service = google_compute_backend_service.ai_agent_backend.id
 
   host_rule {
-    hosts        = ["crm.${var.domain_name}"]
-    path_matcher = "crm"
-  }
-
-  host_rule {
     hosts        = [var.domain_name]
     path_matcher = "main"
-  }
-
-  path_matcher {
-    name            = "crm"
-    default_service = google_compute_backend_service.suitecrm_backend.id
   }
 
   path_matcher {
@@ -697,19 +530,10 @@ output "cloud_run_url" {
   value = google_cloud_run_service.ai_agent.status[0].url
 }
 
-output "suitecrm_url" {
-  value = google_cloud_run_service.suitecrm.status[0].url
-}
-
-
 output "load_balancer_ip" {
   value = google_compute_global_address.default.address
 }
 
 output "storage_bucket_name" {
   value = google_storage_bucket.frontend_assets.name
-}
-
-output "cloud_sql_instance" {
-  value = google_sql_database_instance.suitecrm_db.name
 }

@@ -8,6 +8,7 @@ import { logger } from './utils/logger.js';
 import { aiAgentRouter } from './routes/aiAgent.js';
 import { phoneRouter } from './routes/phone.js';
 import { supportRouter } from './routes/support.js';
+import crmRouter from './routes/crm.js';
 
 // Load environment variables
 dotenv.config();
@@ -38,6 +39,7 @@ app.get('/health', (req, res) => {
 app.use('/api/ai', aiAgentRouter);
 app.use('/api/phone', phoneRouter);
 app.use('/api/support', supportRouter);
+app.use('/api/crm', crmRouter);
 
 // 404 handler
 app.use('*', (req, res) => {

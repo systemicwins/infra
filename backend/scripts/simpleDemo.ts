@@ -42,7 +42,7 @@ class SimpleModelSelectionDemo {
     // Premium models
     { name: 'Claude Opus 4.1', provider: 'Anthropic', pricing: { inputCostPer1kTokens: 15.00, outputCostPer1kTokens: 75.00 }, strengths: ['complex_reasoning', 'creative'] },
     { name: 'Gemini 1.5 Pro', provider: 'Google', pricing: { inputCostPer1kTokens: 1.25, outputCostPer1kTokens: 5.00 }, strengths: ['large_context', 'reasoning'] },
-    { name: 'GPT-4o', provider: 'OpenAI', pricing: { inputCostPer1kTokens: 5.00, outputCostPer1kTokens: 15.00 }, strengths: ['creative', 'vision'] },
+    { name: 'GPT-4o', provider: 'OpenAI', pricing: { inputCostPer1kTokens: 2.50, outputCostPer1kTokens: 10.00 }, strengths: ['creative', 'vision'] },
     { name: 'Claude 3 Opus', provider: 'Anthropic', pricing: { inputCostPer1kTokens: 15.00, outputCostPer1kTokens: 75.00 }, strengths: ['complex_reasoning', 'creative'] }
   ];
 

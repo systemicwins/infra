@@ -90,7 +90,8 @@ class ModelSelectionDemo {
     console.log('📊 Available Models:');
     const models = this.modelSelectionService.getAvailableModels();
     models.forEach(model => {
-      console.log(`   ${model.name}: $${model.costPer1kTokens.toFixed(3)}/1k tokens`);
+      const avgCost = (model.pricing.inputCostPer1kTokens + model.pricing.outputCostPer1kTokens) / 2;
+      console.log(`   ${model.name}: $${avgCost.toFixed(3)}/1k tokens avg`);
     });
 
     console.log('\n' + '='.repeat(80));
@@ -161,7 +162,8 @@ class ModelSelectionDemo {
 
     if (expensiveModel) {
       const avgTokensPerRequest = 300; // Average tokens per request
-      const alwaysExpensiveCost = 5 * (expensiveModel.costPer1kTokens * avgTokensPerRequest) / 1000;
+      const avgCostPer1kTokens = (expensiveModel.pricing.inputCostPer1kTokens + expensiveModel.pricing.outputCostPer1kTokens) / 2;
+      const alwaysExpensiveCost = 5 * (avgCostPer1kTokens * avgTokensPerRequest) / 1000;
 
       console.log(`   Cost if always using ${expensiveModel.name}: $${alwaysExpensiveCost.toFixed(4)}`);
       console.log(`   Actual optimized cost: $${(5 * 0.0012).toFixed(4)} (estimated)`);

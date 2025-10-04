@@ -1,4 +1,4 @@
-import { VertexAI } from '@google-cloud/aiplatform';
+import { VertexAI } from '@google-cloud/aiplatform/v1beta1';
 import OpenAI from 'openai';
 import { logger } from '../utils/logger.js';
 
@@ -33,7 +33,7 @@ export interface SelectedModel {
 }
 
 export class ModelSelectionService {
-  private vertexAI: VertexAI;
+  // private vertexAI: VertexAI; // TODO: Fix VertexAI import for this package version
   private openAI: OpenAI;
   private projectId: string;
   private location: string;
@@ -196,8 +196,8 @@ export class ModelSelectionService {
       provider: 'openai',
       modelId: 'gpt-4o',
       pricing: {
-        inputCostPer1kTokens: 5.00, // $5.00 per 1k input tokens
-        outputCostPer1kTokens: 15.00 // $15.00 per 1k output tokens
+        inputCostPer1kTokens: 2.50, // $2.50 per 1k input tokens
+        outputCostPer1kTokens: 10.00 // $10.00 per 1k output tokens
       },
       contextWindow: 128000,
       strengths: ['creative', 'nuanced_understanding', 'good_for_creative'],
@@ -263,10 +263,11 @@ export class ModelSelectionService {
     this.projectId = process.env.FIRESTORE_PROJECT_ID || 'your-project-id';
     this.location = process.env.VERTEX_AI_LOCATION || 'us-central1';
 
-    this.vertexAI = new VertexAI({
-      project: this.projectId,
-      location: this.location,
-    });
+    // TODO: Fix VertexAI initialization
+    // this.vertexAI = new VertexAI({
+    //   project: this.projectId,
+    //   location: this.location,
+    // });
 
     this.openAI = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
@@ -347,15 +348,15 @@ export class ModelSelectionService {
         );
       } else {
         fallback = {
-          name: 'Gemini 1.5 Flash',
+          name: 'Gemini 2.5 Flash',
           provider: 'vertex' as const,
-          modelId: 'gemini-1.5-flash',
+          modelId: 'gemini-2.5-flash',
           pricing: {
-            inputCostPer1kTokens: 0.075,
-            outputCostPer1kTokens: 0.30
+            inputCostPer1kTokens: 0.15,
+            outputCostPer1kTokens: 0.60
           },
           contextWindow: 1048576,
-          strengths: ['fast', 'efficient', 'good_for_simple'],
+          strengths: ['balanced', 'good_for_moderate', 'multimodal'],
           maxTokens: 8192,
           temperature: 0.7
         };
@@ -391,15 +392,15 @@ export class ModelSelectionService {
         fallback = this.models[0];
       } else {
         fallback = {
-          name: 'Gemini 1.5 Flash',
+          name: 'Gemini 2.5 Flash',
           provider: 'vertex' as const,
-          modelId: 'gemini-1.5-flash',
+          modelId: 'gemini-2.5-flash',
           pricing: {
-            inputCostPer1kTokens: 0.075,
-            outputCostPer1kTokens: 0.30
+            inputCostPer1kTokens: 0.15,
+            outputCostPer1kTokens: 0.60
           },
           contextWindow: 1048576,
-          strengths: ['fast', 'efficient', 'good_for_simple'],
+          strengths: ['balanced', 'good_for_moderate', 'multimodal'],
           maxTokens: 8192,
           temperature: 0.7
         };
@@ -460,7 +461,9 @@ export class ModelSelectionService {
    */
   getModelClient(modelConfig: ModelConfig): VertexAI | OpenAI {
     if (modelConfig.provider === 'vertex') {
-      return this.vertexAI;
+      // TODO: Fix VertexAI import
+      // return this.vertexAI;
+      throw new Error('VertexAI not available in this package version');
     } else {
       return this.openAI;
     }
@@ -469,17 +472,18 @@ export class ModelSelectionService {
   /**
    * Create Vertex AI model instance
    */
-  createVertexModel(modelConfig: ModelConfig) {
-    return this.vertexAI.getGenerativeModel({
-      model: modelConfig.modelId,
-      generationConfig: {
-        temperature: modelConfig.temperature || 0.7,
-        topK: 40,
-        topP: 0.95,
-        maxOutputTokens: modelConfig.maxTokens || 2048,
-      },
-    });
-  }
+  // TODO: Fix VertexAI import
+  // createVertexModel(modelConfig: ModelConfig) {
+  //   return this.vertexAI.getGenerativeModel({
+  //     model: modelConfig.modelId,
+  //     generationConfig: {
+  //       temperature: modelConfig.temperature || 0.7,
+  //       topK: 40,
+  //       topP: 0.95,
+  //       maxOutputTokens: modelConfig.maxTokens || 2048,
+  //     },
+  //   });
+  // }
 
   /**
    * Get all available models for debugging/monitoring

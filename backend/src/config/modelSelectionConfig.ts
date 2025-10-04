@@ -109,7 +109,7 @@ export interface ModelSelectionConfig {
 
 export const defaultModelSelectionConfig: ModelSelectionConfig = {
   enabled: true,
-  defaultModel: 'gemini-1.5-flash',
+  defaultModel: 'gemini-2.5-flash',
 
   costOptimization: {
     enabled: true,

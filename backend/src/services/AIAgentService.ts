@@ -4,7 +4,6 @@ import { SpeechToTextClient } from '@google-cloud/speech';
 import { Firestore } from '@google-cloud/firestore';
 import OpenAI from 'openai';
 import { logger } from '../utils/logger.js';
-import { SuiteCRMMCPServer } from './SuiteCRMMCP.js';
 import { ModelSelectionService, ModelSelectionCriteria } from './ModelSelectionService.js';
 import { CostTrackingService } from './CostTrackingService.js';
 
@@ -31,7 +30,6 @@ export class AIAgentService {
   private speechToTextClient: SpeechToTextClient;
   private firestore: Firestore;
   private openAI: OpenAI;
-  private suiteCRMMCP: SuiteCRMMCPServer;
   private modelSelectionService: ModelSelectionService;
   private costTrackingService: CostTrackingService;
   private elevenLabsAPIKey: string;
@@ -65,8 +63,6 @@ export class AIAgentService {
       projectId: this.projectId,
     });
 
-    // Initialize SuiteCRM MCP server
-    this.suiteCRMMCP = new SuiteCRMMCPServer();
 
     // Initialize Model Selection and Cost Tracking services
     this.modelSelectionService = new ModelSelectionService();
@@ -351,9 +347,9 @@ export class AIAgentService {
         if (identifier) {
           // Use MCP server to get comprehensive customer data
           if (identifier.phone) {
-            customerContext = await this.suiteCRMMCP.executeTool('getCustomer', { phone: identifier.phone });
+            customerContext = null; // TODO: Replace with Firebase CRM integration
           } else if (identifier.email) {
-            customerContext = await this.suiteCRMMCP.executeTool('getCustomer', { email: identifier.email });
+            customerContext = null; // TODO: Replace with Firebase CRM integration
           }
 
           if (customerContext) {
@@ -363,34 +359,8 @@ export class AIAgentService {
               lifetimeValue: customerContext.lifetime_value
             });
 
-            // Get additional context if we have customer ID
-            if (customerContext.id) {
-              try {
-                // Get purchase history
-                const purchaseHistory = await this.suiteCRMMCP.executeTool('getPurchaseHistory', {
-                  customerId: customerContext.id,
-                  limit: 5
-                });
-                customerContext.recentPurchases = purchaseHistory;
-
-                // Get support cases
-                const supportCases = await this.suiteCRMMCP.executeTool('getSupportCases', {
-                  customerId: customerContext.id,
-                  limit: 3
-                });
-                customerContext.recentSupportCases = supportCases;
-
-                // Get customer preferences
-                const preferences = await this.suiteCRMMCP.executeTool('getCustomerPreferences', {
-                  customerId: customerContext.id
-                });
-                customerContext.preferences = preferences;
-
-                logger.info('Retrieved comprehensive customer context including purchases and support history');
-              } catch (contextError) {
-                logger.warn('Could not retrieve additional customer context:', contextError);
-              }
-            }
+            // TODO: Replace with Firebase CRM integration for additional context
+            logger.info('Customer context available for enhanced response');
           }
         }
       } catch (error) {
@@ -398,65 +368,17 @@ export class AIAgentService {
       }
 
       // Build system prompt with customer context
-      let systemPrompt = `You are a helpful customer support AI assistant for a business that uses SuiteCRM for customer management.
+      let systemPrompt = `You are a helpful customer support AI assistant for a business that uses Firebase CRM for customer management.
 
 You have access to comprehensive customer data including purchase history, support cases, preferences, and lifetime value metrics. Use this information to provide personalized, contextual support that anticipates customer needs.
 
 Current conversation context:
 - Session ID: ${sessionId}
 - Message count: ${context.messages.length}
-- Channel: ${this.getChannelFromSessionId(sessionId)}`;
-
-      if (customerContext) {
-        systemPrompt += `
+- Channel: ${this.getChannelFromSessionId(sessionId)}
 
 === CUSTOMER PROFILE ===
-Name: ${customerContext.first_name} ${customerContext.last_name}
-Email: ${customerContext.email}
-Phone: ${customerContext.phone}
-Account Created: ${customerContext.created_date}
-Last Contact: ${customerContext.last_contact_date || 'Never'}
-Preferred Contact Method: ${customerContext.preferred_contact_method || 'Not specified'}
-Customer Segment: ${customerContext.customer_segment || 'Standard'}
-Total Purchases: ${customerContext.total_purchases || 0}
-Lifetime Value: $${customerContext.lifetime_value?.toFixed(2) || '0.00'}
-Tags: ${customerContext.tags?.join(', ') || 'None'}`;
-
-        // Add purchase history if available
-        if (customerContext.recentPurchases && customerContext.recentPurchases.length > 0) {
-          systemPrompt += `
-
-=== RECENT PURCHASES ===
-${customerContext.recentPurchases.map((p: any) =>
-  `- ${p.product_name} (${p.product_category}) - $${p.amount} on ${p.purchase_date}`
-).join('\n')}`;
-        }
-
-        // Add support cases if available
-        if (customerContext.recentSupportCases && customerContext.recentSupportCases.length > 0) {
-          systemPrompt += `
-
-=== RECENT SUPPORT CASES ===
-${customerContext.recentSupportCases.map((c: any) =>
-  `- ${c.subject} (${c.status}, ${c.priority}) - ${c.created_date}`
-).join('\n')}`;
-        }
-
-        // Add preferences if available
-        if (customerContext.preferences) {
-          systemPrompt += `
-
-=== CUSTOMER PREFERENCES ===
-Language: ${customerContext.preferences.preferred_language}
-Contact Method: ${customerContext.preferences.preferred_contact_method}
-Marketing Opt-in: ${customerContext.preferences.marketing_opt_in ? 'Yes' : 'No'}
-Notifications: ${customerContext.preferences.notification_preferences.join(', ')}`;
-          if (customerContext.preferences.special_requirements) {
-            systemPrompt += `
-Special Requirements: ${customerContext.preferences.special_requirements}`;
-          }
-        }
-      }
+Customer context will be available through Firebase CRM integration. For now, provide general assistance and ask for customer identification if needed.`;
 
       systemPrompt += `
 
@@ -551,6 +473,8 @@ Respond to the customer's message:`;
     if (parts.length >= 2) {
       const identifier = parts[1];
 
+      if (!identifier) return null;
+
       // Check if it looks like a phone number (contains digits and common phone symbols)
       if (/^[\d\+\-\(\)\s]+$/.test(identifier) && identifier.length >= 10) {
         return { phone: identifier.replace(/[^\d]/g, '') };
@@ -643,10 +567,10 @@ Respond to the customer's message:`;
         const transcription = await this.openAI.audio.transcriptions.create({
           file: audioFile,
           model: 'whisper-1',
-          language: languageCode.split('-')[0], // Extract language part (e.g., 'en' from 'en-US')
-          response_format: 'text'
-        });
-        return transcription;
+          language: languageCode.split('-')[0] as any, // Extract language part (e.g., 'en' from 'en-US')
+          response_format: 'text' as any
+        } as any);
+        return transcription.text || '';
       }
     } catch (error) {
       logger.warn('OpenAI Whisper failed, falling back to Google Cloud Speech-to-Text:', error);

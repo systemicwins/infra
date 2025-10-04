@@ -160,11 +160,12 @@ class CostEffectivenessValidator {
       }
 
       // Show available models and their costs
-      const models = this.modelSelectionService.getAvailableModels();
-      console.log('\n📋 Available Models:');
-      models.forEach(model => {
-        console.log(`   ${model.name}: $${model.costPer1kTokens.toFixed(3)} per 1k tokens`);
-      });
+       const models = this.modelSelectionService.getAvailableModels();
+       console.log('\n📋 Available Models:');
+       models.forEach(model => {
+         const avgCost = (model.pricing.inputCostPer1kTokens + model.pricing.outputCostPer1kTokens) / 2;
+         console.log(`   ${model.name}: $${avgCost.toFixed(3)} per 1k tokens avg`);
+       });
 
     } catch (error) {
       console.log('   Error analyzing costs:', error);
@@ -249,7 +250,8 @@ class CostEffectivenessValidator {
         .find(m => m.name === mostExpensiveModel[0]);
 
       if (expensiveModelConfig) {
-        const alwaysExpensiveCost = totalRequests * (expensiveModelConfig.costPer1kTokens * 0.4); // Assume 400 tokens per request
+        const avgCostPer1kTokens = (expensiveModelConfig.pricing.inputCostPer1kTokens + expensiveModelConfig.pricing.outputCostPer1kTokens) / 2;
+        const alwaysExpensiveCost = totalRequests * (avgCostPer1kTokens * 0.4); // Assume 400 tokens per request
         const savings = alwaysExpensiveCost - totalCost;
         const savingsPercentage = (savings / alwaysExpensiveCost) * 100;
 

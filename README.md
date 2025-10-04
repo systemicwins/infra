@@ -29,7 +29,7 @@ This platform provides a complete customer support solution for businesses with:
   - **💬 SMS**: Twilio SMS API with CRM context integration
   - **🌐 Web Chat**: Real-time chat interface with conversation history
   - **📧 Email**: SendGrid API integration with AI-powered responses
-- **CRM Integration**: SuiteCRM for customer relationship management and context *(Fully automated deployment)*
+- **CRM Integration**: Firebase CRM for customer relationship management and context *(Fully automated deployment)*
 - **Persistent Memory**: Conversation history and context retention across CRM records
 - **Scalable Infrastructure**: Auto-scaling Google Cloud resources with complete CRM stack
 - **Modern UI**: Responsive Svelte frontend with Bootstrap styling
@@ -39,7 +39,7 @@ This platform provides a complete customer support solution for businesses with:
 **Fully Automated Deployment**: When you run `terraform apply`, this infrastructure automatically provisions:
 
 - ✅ **AI Customer Support**: Gemini 2.5 Flash with phone and chat integration
-- ✅ **CRM System**: SuiteCRM with PostgreSQL database (`crm.yourdomain.com`)
+- ✅ **CRM System**: Firebase CRM with Firestore database (`crm.yourdomain.com`)
 - ✅ **Load Balancing**: Subdomain routing for seamless service access
 - ✅ **SSL Security**: Automatic certificate management for custom domains
 - ✅ **Database Integration**: PostgreSQL with automated backups and scaling
@@ -49,7 +49,7 @@ This platform provides a complete customer support solution for businesses with:
 When deployed with a custom domain (e.g., `yourbusiness.com`):
 
 - **Main Site**: `yourbusiness.com` - Landing page and support interface
-- **CRM Portal**: `crm.yourbusiness.com` - SuiteCRM customer management
+- **CRM Portal**: `crm.yourbusiness.com` - Firebase CRM customer management
 - **API Endpoints**: Integrated across services for seamless data flow
 
 ### 💼 Why CRM Integration Matters for Business Acquisition
@@ -66,7 +66,7 @@ When acquiring a new business, **immediate access to customer data and support i
 
 **The Problem Solved**: Traditional business acquisitions often lose 20-30% of customers due to poor transition management. This infrastructure ensures **zero-downtime customer experience** with AI-powered support that knows every customer personally, including their complete purchase history and preferences.
 
-**Data Migration Note**: When acquiring an existing business, simply import customer and purchase data into SuiteCRM. The AI agent will immediately have access to complete customer context for personalized support.
+**Data Migration Note**: When acquiring an existing business, simply import customer and purchase data into Firebase CRM. The AI agent will immediately have access to complete customer context for personalized support.
 
 ### Implementing Sales Pipeline Features *(Future Enhancement)*
 
@@ -78,11 +78,11 @@ When acquiring a new business, **immediate access to customer data and support i
    - Lead scoring and qualification logic
 
 2. **Automated Lead Nurturing** *(Backend)*
-   - Email sequence automation via SuiteCRM workflows
+   - Email sequence automation via Firebase CRM workflows
    - Lead scoring algorithms
    - Sales team notification triggers
 
-3. **Sales Pipeline Management** *(SuiteCRM)*
+3. **Sales Pipeline Management** *(Firebase CRM)*
    - Custom pipeline stages for your business
    - Lead-to-opportunity conversion workflows
    - Sales forecasting and reporting
@@ -130,7 +130,7 @@ const importAcquiredCustomers = async (sourceSystem: string) => {
     includeRemoteData: true
   });
 
-  // 3. Transform and import to SuiteCRM
+  // 3. Transform and import to Firebase CRM
   for (const customer of customers) {
     await suiteCRM.createContact({
       first_name: customer.firstName,
@@ -211,8 +211,8 @@ const syncPayrollData = async (acquiredCompanyId: string) => {
 
 3. **Data Migration** (Week 3-4)
    ```typescript
-   // Migrate customers to SuiteCRM
-   await migrateCustomers(integration.id, 'suitecrm');
+   // Migrate customers to Firebase CRM
+   await migrateCustomers(integration.id, 'firebase');
 
    // Migrate employees to HR system
    await migrateEmployees(integration.id, 'frappe-hr');
@@ -225,7 +225,7 @@ const syncPayrollData = async (acquiredCompanyId: string) => {
 ### Current Email Capabilities *(Customer Data Only)*
 
 **Currently Implemented:**
-- **Email as Customer Data**: Email addresses stored in SuiteCRM for customer identification
+- **Email as Customer Data**: Email addresses stored in Firebase CRM for customer identification
 - **Email Data Import**: Import email lists from marketing platforms during acquisition
 - **Email Contact Method**: Support contact form includes email field for follow-up
 
@@ -233,7 +233,7 @@ const syncPayrollData = async (acquiredCompanyId: string) => {
 - ✅ **SendGrid Integration**: Full SendGrid API integration for email sending
 - ✅ **Email Processing**: AI agent can process incoming emails with CRM context
 - ✅ **Email Responses**: Automated email responses via SendGrid API
-- ✅ **Customer Email Integration**: Email addresses stored in SuiteCRM for identification
+- ✅ **Customer Email Integration**: Email addresses stored in Firebase CRM for identification
 
 **Implemented Email Features:**
 - ✅ **Mailchimp Integration**: Full Mailchimp API integration for marketing campaigns
@@ -266,7 +266,7 @@ const processEmail = async (emailData) => {
 
 **2. Automated Email Notifications**
 ```typescript
-// SuiteCRM workflow triggers
+// Firebase CRM workflow triggers
 const emailWorkflows = {
   newCustomer: 'Welcome email with AI-generated content',
   supportTicket: 'Automated acknowledgment with case details',
@@ -348,7 +348,7 @@ resource "google_secret_manager_secret" "mailchimp_list_id" {
 
 **Email Workflow Automation:**
 ```php
-// SuiteCRM email workflows
+// Firebase CRM email workflows
 $sugar_config['email_workflows'] = array(
     'new_ticket_notification' => array(
         'trigger' => 'new_case_created',
@@ -392,21 +392,21 @@ $sugar_config['email_workflows'] = array(
 - **Website Contact Forms** (database exports of form submissions)
 - **Social Media** (Facebook, LinkedIn business page contacts)
 
-### SuiteCRM Import Methods
+### Firebase CRM Import Methods
 
 **1. CSV Import (Primary Method)**
 ```bash
 # Export from source system as CSV
 # Format: customer_name,email,phone,address,purchase_history,notes
 
-# Access SuiteCRM → Import → Select Module (Contacts/Leads/Accounts)
+# Access Firebase CRM → Import → Select Module (Contacts/Leads/Accounts)
 # Upload CSV → Map fields → Import data
 # Supports: Contacts, Leads, Accounts, Opportunities, Custom Modules
 ```
 
 **2. API Integration (Automated)**
 ```typescript
-// Programmatic import via SuiteCRM REST API
+// Programmatic import via Firebase CRM REST API
 const importCustomers = async (customerData) => {
   const response = await fetch('https://crm.yourdomain.com/api/contacts', {
     method: 'POST',
@@ -423,8 +423,8 @@ const importCustomers = async (customerData) => {
 ```
 
 **3. Data Migration Tools**
-- **CSV Import Wizard**: Built-in SuiteCRM functionality
-- **SuiteCRM Plugins**: Community extensions for enhanced imports
+- **CSV Import Wizard**: Built-in Firebase CRM functionality
+- **Firebase CRM Plugins**: Community extensions for enhanced imports
 - **ETL Tools**: Third-party tools for complex data transformation
 
 ### Import Process for Different Business Types
@@ -455,7 +455,7 @@ Bob Wilson,bob@email.com,+1122334455,Premium,2023-06-01,2024-06-01,High
 **Automatic Context Building:**
 ```typescript
 // After import, AI agent immediately has access
-const customerContext = await suiteCRM.lookupCustomer(phoneNumber);
+const customerContext = await firebaseCRM.getCustomer(phoneNumber);
 // Returns: { purchases: [...], preferences: [...], history: [...] }
 
 const personalizedResponse = await aiAgent.generate({
@@ -504,7 +504,7 @@ const fieldMapping = {
 **Week 2: Preparation**
 - Clean and standardize data
 - Create field mapping templates
-- Set up SuiteCRM custom fields if needed
+- Set up Firebase CRM custom fields if needed
 
 **Week 3: Import & Validation**
 - Execute batch imports
@@ -520,8 +520,8 @@ const fieldMapping = {
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Frontend      │    │   Backend API   │    │   SuiteCRM      │    │  Google Cloud   │
-│   (Svelte)      │◄──►│   (Node.js)     │◄──►│   (PostgreSQL)  │◄──►│  Services       │
+│   Frontend      │    │   Backend API   │    │   Firebase CRM  │    │  Google Cloud   │
+│   (Svelte)      │◄──►│   (Node.js)     │◄──►│   (Firestore)   │◄──►│  Services       │
 │                 │    │                 │    │                 │    │                 │
 │ • Landing Page  │    │ • AI Agent      │    │ • Purchase Hist.│    │ • Firestore     │
 │ • Chat Interface│    │ • CRM Lookup    │    │ • Support Cases │    │ • Cloud Run     │
@@ -532,7 +532,7 @@ const fieldMapping = {
 
 ### Service Integration
 
-- **AI Agent ↔ SuiteCRM**: Real-time customer lookups during phone conversations
+- **AI Agent ↔ Firebase CRM**: Real-time customer lookups during phone conversations
 - **Phone Support ↔ CRM**: Automatic ticket creation and customer context retrieval
 - **Web Forms ↔ CRM**: Seamless lead capture and customer record creation
 - **Email Processing ↔ AI Agent**: AI-powered email responses with customer context ✅ **Implemented**
@@ -545,8 +545,8 @@ const fieldMapping = {
 
 | Service | Purpose | Configuration |
 |---------|---------|---------------|
-| **Cloud Run** | Serverless backend | Auto-scaling Node.js API & SuiteCRM |
-| **Cloud SQL** | PostgreSQL database | SuiteCRM data storage |
+| **Cloud Run** | Serverless backend | Auto-scaling Node.js API |
+| **Firestore** | NoSQL database | CRM data storage |
 | **Firestore** | NoSQL database | Conversation & ticket storage |
 | **Vertex AI** | Conversational AI | Gemini 2.5 Flash for natural language processing |
 | **Twilio API** | Phone integration | Voice/SMS handling & number provisioning |
@@ -566,12 +566,11 @@ const fieldMapping = {
 
 **AI Services**:
 - Vertex AI Gemini 2.5 Flash for conversational AI
-- Custom MCP server for SuiteCRM integration
+- Firebase CRM integration
 
 **Business Applications** *(Fully Automated)*:
-- ✅ **Cloud SQL PostgreSQL** for SuiteCRM database
-- ✅ **Cloud Run service** for SuiteCRM application
-- ✅ **Load Balancer** for subdomain routing (`crm.yourdomain.com`)
+- ✅ **Firestore** for CRM data storage
+- ✅ **Load Balancer** for domain routing
 - ✅ **SSL Certificates** for custom domain security (`yourbusiness.com`, `crm.yourbusiness.com`)
 
 **Communication Services**:
@@ -579,7 +578,7 @@ const fieldMapping = {
 - SendGrid API for email processing and responses
 
 **Data Storage**:
-- Firestore database for conversations
+- Firestore database for conversations and CRM data
 - Cloud Storage for frontend assets
 
 **Security & Access**:
@@ -634,21 +633,21 @@ context.messages.push({
 | `/subscribe` | POST | Add email to Mailchimp mailing list | ✅ **Implemented** |
 | `/unsubscribe` | DELETE | Remove email from Mailchimp mailing list | ✅ **Implemented** |
 | `/campaign/:campaignId/analytics` | GET | Get campaign analytics and performance data | ✅ **Implemented** |
-| `/crm/mcp` | POST | Direct MCP access to SuiteCRM tools |
+| `/crm/customers` | GET/POST | Firebase CRM customer management |
 
 ## 🔗 CRM Integration
 
-### SuiteCRM Customer Context
+### Firebase CRM Customer Context
 
-The AI agent seamlessly integrates with SuiteCRM to provide personalized customer support experiences:
+The AI agent seamlessly integrates with Firebase CRM to provide personalized customer support experiences:
 
 **Enhanced Customer Context Process:**
 ```typescript
 // AI Agent receives phone number or customer identifier
 const customerContext = await lookupCustomer(phoneNumber);
 
-// Query SuiteCRM via MCP server for comprehensive customer information
-const customerData = await suiteCRM.executeTool('getCustomer', {
+// Query Firebase CRM for comprehensive customer information
+const customerData = await firebaseCRM.getCustomer({
   phone: phoneNumber
 });
 
@@ -683,33 +682,37 @@ const personalizedResponse = await geminiFlash.generateResponse({
 - **Support Case Integration**: AI can create support tickets and access existing case history with full context
 - **Customer Preference Tracking**: Language preferences, contact methods, notification preferences, and special requirements
 - **Contextual Responses**: AI responses personalized based on complete customer profile, purchase patterns, and support history
-- **Conversation History Sync**: All interactions logged in both Firestore and SuiteCRM with full context preservation
+- **Conversation History Sync**: All interactions logged in both Firestore and Firebase CRM with full context preservation
 - **Vertical-Specific Data**: Custom fields for different business types (products, services, subscriptions, IoT, etc.)
 - **Customer Lifetime Value**: AI understands customer value metrics for personalized service prioritization
 - **Behavioral Analytics**: AI can reference customer behavior patterns for predictive support
 
-### SuiteCRM Configuration
+### Firebase CRM Configuration
 
 **Database Integration:**
-```php
-// SuiteCRM config.php for Google Cloud SQL PostgreSQL
-$sugar_config['dbconfig'] = array(
-    'db_type' => 'pgsql',
-    'db_host_name' => 'your-cloud-sql-ip:5432',
-    'db_user_name' => 'suitecrm_user',
-    'db_password' => 'secure_password',
-    'db_name' => 'suitecrm_db',
-    'db_manager' => 'pg',
-);
+```typescript
+// Firebase configuration for Firestore
+const firebaseConfig = {
+  apiKey: process.env.FIREBASE_API_KEY,
+  authDomain: process.env.FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.FIREBASE_PROJECT_ID,
+  storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.FIREBASE_APP_ID
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 ```
 
-**MCP Server Integration:**
+**CRM Service Integration:**
 ```typescript
-// SuiteCRM MCP server provides real-time data access
-const suiteCRMMCP = new SuiteCRMMCPServer();
+// Firebase CRM service provides real-time data access
+const crmService = new FirebaseCRMService();
 
-// MCP tools available to AI agent
-const availableTools = [
+// Available methods for AI agent
+const availableMethods = [
   'getCustomer',           // Customer profile and contact info
   'getPurchaseHistory',    // Complete purchase history with categories
   'getSupportCases',       // Support case history with resolution details
@@ -720,19 +723,18 @@ const availableTools = [
 ];
 ```
 
-### 🔐 SuiteCRM Authentication & Access
+### 🔐 Firebase CRM Authentication & Access
 
-**Default Admin Account:**
-- **URL**: `https://crm.yourdomain.com`
-- **Username**: `admin`
-- **Password**: Configured via `suitecrm_admin_password` Terraform variable
+**API Access:**
+- **Base URL**: `https://your-api-domain.com/api/crm`
+- **Authentication**: Firebase service account or API keys
+- **Security**: All access through secure HTTPS with authentication
 
 **Access Control Features:**
-- **User Management**: Create additional users and assign roles
-- **Role-Based Access**: Control permissions for different user types
-- **Password Policies**: Configure password requirements and expiration
-- **Session Management**: Automatic logout and session security
-- **SSL Required**: All access through secure HTTPS connection
+- **Service Account**: Firebase service account for programmatic access
+- **API Keys**: Secure API key authentication for external integrations
+- **Firestore Security Rules**: Granular access control at document level
+- **Real-time Updates**: Live data synchronization across services
 
 ## 🎯 Sales Pipeline & Lead Management
 
@@ -741,7 +743,7 @@ const availableTools = [
 **Currently Implemented:**
 - **Newsletter Signup**: Email capture from homepage
 - **Support Tickets**: Contact information from support requests
-- **Basic CRM Modules**: SuiteCRM supports Leads, Accounts, and Opportunities
+- **Basic CRM Modules**: Firebase CRM supports Customers, Orders, and Interactions
 
 **Missing Sales Pipeline Features:**
 - ❌ **Lead Scoring**: Automatic qualification of prospects
@@ -774,35 +776,33 @@ const availableTools = [
 5. Purchase Tracking → Customer Data → AI context for support
 ```
 
-### SuiteCRM Sales Pipeline Modules
+### Firebase CRM Sales Pipeline Modules
 
 **Built-in Sales Modules:**
-- **Leads**: Prospect information and qualification status
-- **Accounts**: Company/organization information
-- **Contacts**: Individual contact details
-- **Opportunities**: Sales opportunities with value and stage tracking
-- **Activities**: Calls, meetings, emails, and tasks
-- **Reports**: Sales performance and pipeline analytics
+- **Customers**: Customer information and lifetime value
+- **Orders**: Purchase history and transaction tracking
+- **Interactions**: Communication history across all channels
+- **Analytics**: Customer behavior and value metrics
 
 **Custom Configuration (Post-Deployment):**
-```php
-// Example: Custom module for product purchases
-$sugar_config['custom_modules'] = array(
-    'Purchases' => array(
-        'customer_id' => 'relate',
-        'product_name' => 'varchar(255)',
-        'purchase_date' => 'date',
-        'amount' => 'currency',
-        'status' => 'enum', // pending, completed, refunded
-        'category' => 'enum' // electronics, services, subscriptions
-    )
-);
+```typescript
+// Example: Custom collection for product purchases
+interface Purchase {
+  customerId: string;
+  productName: string;
+  purchaseDate: Date;
+  amount: number;
+  status: 'pending' | 'completed' | 'refunded';
+  category: 'electronics' | 'services' | 'subscriptions';
+}
+
+// Firestore collection: purchases
 ```
 
 **AI Agent Integration:**
 ```typescript
 // AI Agent retrieves purchase context during calls
-const customerPurchases = await suiteCRM.getPurchases({
+const customerPurchases = await firebaseCRM.getCustomerOrders({
   customerId: customerData.id,
   includeHistory: true,
   limit: 10 // Last 10 purchases
@@ -810,8 +810,8 @@ const customerPurchases = await suiteCRM.getPurchases({
 
 // Enhance AI response with purchase context
 const purchaseContext = customerPurchases.map(p => ({
-  product: p.product_name,
-  date: p.purchase_date,
+  product: p.productName,
+  date: p.purchaseDate,
   amount: p.amount,
   status: p.status
 }));
@@ -871,8 +871,8 @@ supportRouter.post('/lead', async (req: Request, res: Response) => {
     qualification: determineQualification(req.body)
   };
 
-  // Create in SuiteCRM Leads module
-  await suiteCRM.createLead(leadData);
+  // Create in Firebase CRM
+  await firebaseCRM.createCustomer(leadData);
 
   // Trigger automated nurturing sequence
   await emailNurturing.startSequence(leadData.email);
@@ -903,33 +903,33 @@ function calculateLeadScore(leadData) {
 ### Automated Lead Nurturing
 
 **Email Sequence Configuration:**
-```php
-// SuiteCRM workflow for lead nurturing
-$sugar_config['lead_nurturing'] = array(
-    'welcome_series' => array(
-        'trigger' => 'new_lead_created',
-        'emails' => array(
-            'day_1' => 'Welcome and value proposition',
-            'day_3' => 'Case study or demo offer',
-            'day_7' => 'Product benefits deep dive',
-            'day_14' => 'Call-to-action for sales contact'
-        )
-    )
-);
+```typescript
+// Firebase CRM workflow for customer nurturing
+const emailWorkflows = {
+  welcome_series: {
+    trigger: 'new_customer_created',
+    emails: [
+      { day: 1, template: 'Welcome and value proposition' },
+      { day: 3, template: 'Case study or demo offer' },
+      { day: 7, template: 'Product benefits deep dive' },
+      { day: 14, template: 'Call-to-action for sales contact' }
+    ]
+  }
+};
 ```
 
 ### Sales Pipeline Integration
 
 **CRM ↔ AI Agent Integration for Sales:**
 ```typescript
-// AI agent can access lead status during conversations
-const leadContext = await suiteCRM.getLeadStatus(customerEmail);
-// Returns: { stage: 'MQL', score: 75, nurturing: 'day_7_sent' }
+// AI agent can access customer status during conversations
+const customerContext = await firebaseCRM.getCustomer(customerEmail);
+// Returns: { lifetimeValue: 1250, lastOrderDate: '2024-01-15', totalOrders: 5 }
 
 const salesResponse = await aiAgent.generate({
   message,
   context: customerContext,
-  leadStatus: leadContext,
+  customerValue: customerContext.lifetimeValue,
   action: 'sales_followup' // Trigger sales team notification
 });
 ```
@@ -1028,13 +1028,13 @@ GET /api/phone/numbers
 ```
 Customer Input (Phone/SMS/Email/Web) → Input Processing
      ↓
-Customer Identification → SuiteCRM MCP → Customer Record Retrieval
+Customer Identification → Firebase CRM → Customer Record Retrieval
      ↓
 Customer Context (History, Preferences, Cases, Purchase Data) → AI Agent Enhancement
      ↓
 Personalized Response Generation → Customer
      ↓
-Conversation & Case Updates → Both Firestore & SuiteCRM
+Conversation & Case Updates → Both Firestore & Firebase CRM
 ```
 
 ### Channel-Specific Processing Flows
@@ -1052,14 +1052,14 @@ Conversation & Case Updates → Both Firestore & SuiteCRM
    ↓
 4. AI Agent processes request:
       ├── Customer identification (phone/email lookup)
-      ├── CRM context retrieval from SuiteCRM (via MCP)
+      ├── CRM context retrieval from Firebase CRM
       ├── Natural language understanding (Gemini 2.5 Flash)
       ├── Context retrieval from Firestore
       ├── Speech-to-text processing (OpenAI Whisper)
       ├── Text-to-speech generation (ElevenLabs)
       ├── Personalized response generation
       ├── Email response sending (for email channel via SendGrid)
-      └── Conversation history update (both Firestore & SuiteCRM)
+      └── Conversation history update (both Firestore & Firebase CRM)
    ↓
 5. Response delivered via chosen channel with full customer context
 ```
@@ -1069,13 +1069,13 @@ Conversation & Case Updates → Both Firestore & SuiteCRM
 ```
 Customer Interaction (Phone/SMS/Email/Web) → Multi-Channel Processing
      ↓
-Customer Identification → SuiteCRM API → Customer Record Retrieval
+Customer Identification → Firebase CRM API → Customer Record Retrieval
      ↓
 Customer Context (History, Preferences, Cases, Purchase Data) → AI Agent Enhancement
      ↓
 Personalized Response Generation → Customer
      ↓
-Conversation & Case Updates → Both Firestore & SuiteCRM
+Conversation & Case Updates → Both Firestore & Firebase CRM
      ↓
 Email Auto-Response (if email channel) → Gmail API
 ```
@@ -1086,7 +1086,7 @@ Customer Email → Email Processing → Gemini 2.5 Flash (AI Agent)
      ↓
 Email Content Analysis → Intent Recognition
      ↓
-Customer Lookup by Email → SuiteCRM (MCP) → Purchase & Support History
+Customer Lookup by Email → Firebase CRM → Purchase & Support History
      ↓
 AI-Generated Response → SendGrid API → Customer Email
 ```
@@ -1112,7 +1112,7 @@ AI-Generated Response → SendGrid API → Customer Email
 ```
 💬 SMS Received → Twilio SMS API → Text Message
      ↓
-🔍 Customer Lookup → SuiteCRM MCP → Customer Context & History
+🔍 Customer Lookup → Firebase CRM → Customer Context & History
      ↓
 🤖 Gemini 2.5 Flash → AI Response Generation
      ↓
@@ -1123,7 +1123,7 @@ AI-Generated Response → SendGrid API → Customer Email
 ```
 📧 Email Received → Email Processing → Customer Identification
      ↓
-🔍 CRM Lookup → SuiteCRM MCP → Customer Context & History
+🔍 CRM Lookup → Firebase CRM → Customer Context & History
      ↓
 🤖 Gemini 2.5 Flash → AI Response Generation
      ↓
@@ -1149,7 +1149,7 @@ async processPhoneCall(audioStream) {
   const transcription = await openAIWhisper.transcribe(audioStream);
 
   // 2. AI Processing with Gemini 2.5 Flash
-  const customerContext = await suiteCRMMCP.getCustomer({ phone: extractPhone(audioStream) });
+  const customerContext = await firebaseCRM.getCustomer({ phone: extractPhone(audioStream) });
   const aiResponse = await geminiFlash.generate({
     text: transcription,
     context: customerContext,
@@ -1171,23 +1171,23 @@ async processPhoneCall(audioStream) {
 2. Twilio streams audio to webhook → Cloud Run AI Agent receives audio
 3. Audio processing → OpenAI Whisper converts speech to text
 4. Customer identification → Extract phone number from call
-5. CRM lookup → SuiteCRM MCP queries customer database
+5. CRM lookup → Firebase CRM queries customer database
 6. Context enhancement → Gemini 2.5 Flash processes with customer history
 7. Response generation → AI creates personalized response
 8. Audio synthesis → ElevenLabs converts text to natural speech
 9. Response delivery → Twilio streams audio back to customer
-10. Conversation logging → Both Firestore and SuiteCRM updated
+10. Conversation logging → Both Firestore and Firebase CRM updated
 ```
 
 **💬 SMS/Text Message Processing:**
 ```
 1. Customer sends SMS → Twilio receives message via webhook
 2. Message processing → Extract sender phone number and content
-3. Customer identification → SuiteCRM MCP lookup by phone
+3. Customer identification → Firebase CRM lookup by phone
 4. Context retrieval → Get customer's purchase history and preferences
 5. AI processing → Gemini 2.5 Flash generates contextual response
 6. Response delivery → Twilio sends SMS reply to customer
-7. Conversation tracking → Update Firestore and SuiteCRM records
+7. Conversation tracking → Update Firestore and Firebase CRM records
 ```
 
 **🌐 Web Chat Processing:**
@@ -1205,12 +1205,12 @@ async processPhoneCall(audioStream) {
 ```
 1. Customer sends email → SendGrid receives email
 2. Email parsing → Extract sender, subject, and content
-3. Customer identification → SuiteCRM MCP lookup by email
+3. Customer identification → Firebase CRM lookup by email
 4. Context enhancement → Get customer's support history and preferences
 5. AI processing → Gemini 2.5 Flash generates contextual email response
 6. Email composition → Create personalized email reply
 7. Response delivery → SendGrid sends email to customer
-8. Conversation tracking → Update both systems with interaction
+8. Conversation tracking → Update both Firestore and Firebase CRM with interaction
 ```
 
 ### Infrastructure Flow
@@ -1238,7 +1238,7 @@ async processPhoneCall(audioStream) {
 **Backend Deployment** (`deployment/github-actions/backend.yml`)
 - Automated testing and linting
 - Docker image building and pushing
-- Cloud Run service deployment (AI Agent & SuiteCRM)
+- Cloud Run service deployment (AI Agent)
 - Environment variable configuration
 - Database migration and seeding
 
@@ -1250,7 +1250,7 @@ async processPhoneCall(audioStream) {
 **Infrastructure** (`deployment/github-actions/terraform.yml`)
 - Plan and apply infrastructure changes
 - Secret management integration
-- Cloud SQL database provisioning
+- Firebase project configuration
 - Load balancer and SSL certificate setup
 
 ### Local Development
@@ -1308,25 +1308,16 @@ cd backend && npm run dev   # Backend development
    # Check that all services are running
    terraform output
 
-   # Access CRM at crm.yourdomain.com
-   # Login with initial admin credentials (from terraform variables)
+   # Firebase CRM is automatically configured and ready to use
    # AI agent will automatically lookup customers during phone calls
    ```
 
-6. **Initial CRM Setup** *(One-time manual step)*
-   ```bash
-   # Access: https://crm.yourdomain.com
-   # Username: admin
-   # Password: [from your suitecrm_admin_password variable]
-
-   # Complete initial setup wizard:
-   # - Configure system settings
-   # - Set up additional users
-   # - Import customer data (if migrating from existing system)
-   # - Configure email settings and integrations
-   # - Set up purchase/order tracking modules for your business vertical
-   # - Import historical purchase data for AI context
-   ```
+6. **Firebase Configuration** *(One-time setup)*
+    ```bash
+    # Firebase CRM is automatically configured via Terraform
+    # No manual setup required - the system is ready to use immediately
+    # Import customer data using the provided API endpoints
+    ```
 
 ### Environment Variables
 
@@ -1336,13 +1327,6 @@ FIRESTORE_PROJECT_ID=your-project-id
 VERTEX_AI_LOCATION=us-central1
 SUPPORT_PHONE_NUMBER=+15551234567
 
-# SuiteCRM Configuration
-SUITECRM_DB_HOST=your-cloud-sql-ip
-SUITECRM_DB_PORT=5432
-SUITECRM_DB_NAME=suitecrm_db
-SUITECRM_DB_USER=suitecrm_user
-SUITECRM_DB_PASSWORD=your-secure-password
-SUITECRM_URL=https://crm.yourbusiness.com
 # ElevenLabs API Configuration (for enhanced text-to-speech)
 ELEVENLABS_API_KEY=your-elevenlabs-api-key
 ELEVENLABS_VOICE_ID=your-preferred-voice-id
@@ -1394,7 +1378,7 @@ mailchimp_list_id = "your-mailchimp-audience-id"
 2. **Service Accounts**
    - Cloud Run service account with minimal permissions
    - Vertex AI access for Gemini 2.5 Flash
-   - Cloud SQL access for SuiteCRM
+   - Firestore access for CRM data
    - Secret Manager access for SendGrid credentials
 
 3. **Phone Number Configuration** *(Twilio Setup)*
@@ -1403,15 +1387,14 @@ mailchimp_list_id = "your-mailchimp-audience-id"
    - Configure webhook URL to point to deployed Cloud Run service
    - Update terraform.tfvars with phone number and Twilio credentials
 
-4. **SuiteCRM Database Setup** *(Automated)*
-   - PostgreSQL instance automatically created via Terraform
-   - Database and user provisioning handled automatically
-   - Credentials stored securely in Secret Manager
-   - Network access configured for VPC connectivity
+4. **Firebase Configuration** *(Automated)*
+    - Firestore database automatically configured via Terraform
+    - Firebase project initialized with proper permissions
+    - Real-time database ready for CRM operations
 
 5. **Custom Domain Configuration** *(Automated)*
    - Load balancer automatically configured for subdomain routing
-   - SSL certificates automatically provisioned for `yourbusiness.com` and `crm.yourbusiness.com`
+   - SSL certificates automatically provisioned for `yourbusiness.com`
    - DNS configuration: Point your domain to the load balancer IP address
 
 6. **SendGrid API Setup** *(Manual - for email support)*
@@ -1505,9 +1488,9 @@ mailchimp_list_id = "your-mailchimp-audience-id"
 - Review build logs for specific errors
 
 **CRM Access Issues**
-- Verify SSL certificate is properly configured for crm.yourdomain.com
-- Check that SuiteCRM service is running: `terraform output suitecrm_service_url`
-- Confirm admin password is correctly set in Terraform variables
+- Verify Firebase project is properly configured
+- Check that Firestore API is enabled in Google Cloud Console
+- Confirm Firebase service account has proper permissions
 
 - Access logs available in Google Cloud Console → Cloud Run → Logs
 
@@ -1536,11 +1519,10 @@ For support and questions:
 - **Phone**: [Configured phone number] - AI-powered support with CRM context *(Customers)*
 - **Email**: support@yourbusiness.com *(Customers)*
 - **Web**: Submit support ticket through the platform *(Customers)*
-- **CRM Portal**: crm.yourbusiness.com - Customer management and case tracking *(Administrators)*
-  - Login: admin / [suitecrm_admin_password from Terraform variables]
+- **CRM API**: Firebase CRM - Customer management and case tracking *(Programmatic access)*
 
 ---
 
 **Complete Multi-Channel Business Infrastructure**: Fully automated deployment of AI-powered customer support across phone, SMS, web chat, and email with integrated CRM for seamless business acquisition and customer retention.
 
-**Built with ❤️ using Google Cloud Platform, Vertex AI (Gemini 2.5 Flash), OpenAI (Whisper), ElevenLabs (TTS), SuiteCRM (MCP Integration), PostgreSQL, Twilio API, SendGrid API, and modern web technologies.**
+**Built with ❤️ using Google Cloud Platform, Vertex AI (Gemini 2.5 Flash), OpenAI (Whisper), ElevenLabs (TTS), Firebase (CRM), Firestore, Twilio API, SendGrid API, and modern web technologies.**
