@@ -6,6 +6,8 @@ import { gmail } from '@google-cloud/gmail';
 import OpenAI from 'openai';
 import { logger } from '../utils/logger.js';
 import { SuiteCRMMCPServer } from './SuiteCRMMCP.js';
+import { ModelSelectionService, ModelSelectionCriteria } from './ModelSelectionService.js';
+import { CostTrackingService } from './CostTrackingService.js';
 
 interface ConversationContext {
   sessionId: string;
@@ -31,6 +33,8 @@ export class AIAgentService {
   private firestore: Firestore;
   private openAI: OpenAI;
   private suiteCRMMCP: SuiteCRMMCPServer;
+  private modelSelectionService: ModelSelectionService;
+  private costTrackingService: CostTrackingService;
   private elevenLabsAPIKey: string;
   private elevenLabsVoiceId: string;
   private sendGridAPIKey: string;
@@ -64,6 +68,10 @@ export class AIAgentService {
 
     // Initialize SuiteCRM MCP server
     this.suiteCRMMCP = new SuiteCRMMCPServer();
+
+    // Initialize Model Selection and Cost Tracking services
+    this.modelSelectionService = new ModelSelectionService();
+    this.costTrackingService = new CostTrackingService();
 
     // Initialize OpenAI for Whisper
     this.openAI = new OpenAI({
@@ -281,17 +289,53 @@ export class AIAgentService {
   }
 
   private async processWithGemini(sessionId: string, message: string, context: ConversationContext): Promise<string> {
+    const startTime = Date.now();
+
+    // Determine model selection criteria
+    const criteria: ModelSelectionCriteria = {
+      complexity: this.determineComplexity(message, context),
+      urgency: this.determineUrgency(message, context),
+      contextLength: context.messages.length,
+      channel: this.getChannelFromSessionId(sessionId),
+      customerTier: await this.determineCustomerTier(context),
+      requiresReasoning: this.requiresAdvancedReasoning(message),
+      requiresCreativity: this.requiresCreativity(message)
+    };
+
     try {
-      // Get the generative model (Gemini 2.5 Flash)
-      const generativeModel = this.vertexAI.getGenerativeModel({
-        model: 'gemini-2.5-flash',
-        generationConfig: {
-          temperature: 0.7,
-          topK: 40,
-          topP: 0.95,
-          maxOutputTokens: 2048,
-        },
+
+      // Estimate tokens for cost calculation
+      const estimatedInputTokens = this.modelSelectionService.estimateTokens(JSON.stringify(context) + message);
+      const estimatedOutputTokens = Math.min(message.length / 4, 1000); // Estimate output tokens
+
+      // Select the most cost-effective model
+      const selectedModel = this.modelSelectionService.selectModel(criteria, estimatedInputTokens + estimatedOutputTokens);
+
+      logger.info('Using dynamic model selection', {
+        sessionId,
+        originalModel: 'gemini-2.5-flash',
+        selectedModel: selectedModel.config.name,
+        estimatedCost: selectedModel.estimatedCost,
+        reasoning: selectedModel.reasoning
       });
+
+      // Get the appropriate model client and create model instance
+      let generativeModel;
+      if (selectedModel.config.provider === 'vertex') {
+        generativeModel = this.modelSelectionService.createVertexModel(selectedModel.config);
+      } else {
+        // For OpenAI models, we'd need to implement OpenAI integration
+        // For now, fallback to Vertex AI
+        generativeModel = this.vertexAI.getGenerativeModel({
+          model: selectedModel.config.modelId,
+          generationConfig: {
+            temperature: selectedModel.config.temperature || 0.7,
+            topK: 40,
+            topP: 0.95,
+            maxOutputTokens: selectedModel.config.maxTokens || 2048,
+          },
+        });
+      }
 
       // Build conversation history for context
       const conversationHistory = context.messages.map(msg => ({
@@ -435,18 +479,67 @@ Respond to the customer's message:`;
       // Send the message
       const result = await chat.sendMessage(message);
       const response = result.response.text();
+      const responseTime = Date.now() - startTime;
 
-      logger.info('Generated Gemini response', {
+      // Estimate tokens for cost calculation
+      const inputTokens = this.modelSelectionService.estimateTokens(JSON.stringify(context) + message);
+      const outputTokens = this.modelSelectionService.estimateTokens(response);
+
+      // Record the usage for cost tracking
+      await this.costTrackingService.recordUsage({
         sessionId,
+        modelName: selectedModel.config.name,
+        modelProvider: selectedModel.config.provider,
+        inputTokens,
+        outputTokens,
+        totalTokens: inputTokens + outputTokens,
+        estimatedCost: selectedModel.estimatedCost,
+        channel: criteria.channel,
+        complexity: criteria.complexity,
+        urgency: criteria.urgency,
+        customerTier: criteria.customerTier || 'standard',
+        responseTime,
+        success: true
+      });
+
+      logger.info('Generated response with dynamic model selection', {
+        sessionId,
+        selectedModel: selectedModel.config.name,
         messageLength: message.length,
         responseLength: response.length,
+        responseTime,
+        estimatedCost: selectedModel.estimatedCost,
         hasCustomerContext: !!customerContext
       });
 
       return response;
 
     } catch (error) {
-      logger.error('Error processing with Gemini:', error);
+      const responseTime = Date.now() - startTime;
+
+      // Record the failed usage for cost tracking
+      try {
+        await this.costTrackingService.recordUsage({
+          sessionId,
+          modelName: 'gemini-2.5-flash', // Default model for failed requests
+          modelProvider: 'vertex',
+          inputTokens: this.modelSelectionService.estimateTokens(JSON.stringify(context) + message),
+          outputTokens: 0,
+          totalTokens: this.modelSelectionService.estimateTokens(JSON.stringify(context) + message),
+          estimatedCost: 0,
+          channel: criteria?.channel || 'chat',
+          complexity: criteria?.complexity || 'moderate',
+          urgency: criteria?.urgency || 'normal',
+          customerTier: criteria?.customerTier || 'standard',
+          responseTime,
+          success: false,
+          errorMessage: error instanceof Error ? error.message : 'Unknown error'
+        });
+      } catch (trackingError) {
+        logger.error('Error recording failed usage:', trackingError);
+      }
+
+      logger.error('Error processing with dynamic model selection:', error);
       return 'I apologize, but I\'m experiencing technical difficulties. Please try again or contact our support team directly.';
     }
   }
@@ -473,11 +566,62 @@ Respond to the customer's message:`;
     return null;
   }
 
-  private getChannelFromSessionId(sessionId: string): string {
-    if (sessionId.startsWith('sms_')) return 'SMS';
-    if (sessionId.startsWith('voice_')) return 'Phone Call';
-    if (sessionId.startsWith('email_')) return 'Email';
-    return 'Web Chat';
+  private getChannelFromSessionId(sessionId: string): 'sms' | 'voice' | 'email' | 'chat' {
+    if (sessionId.startsWith('sms_')) return 'sms';
+    if (sessionId.startsWith('voice_')) return 'voice';
+    if (sessionId.startsWith('email_')) return 'email';
+    return 'chat';
+  }
+
+  private determineComplexity(message: string, context: ConversationContext): 'simple' | 'moderate' | 'complex' {
+    const messageLength = message.length;
+    const contextLength = context.messages.length;
+    const hasTechnicalTerms = /\b(error|bug|issue|problem|configuration|setting|api|database|server)\b/i.test(message);
+
+    if (messageLength < 50 && contextLength < 3 && !hasTechnicalTerms) {
+      return 'simple';
+    } else if (messageLength > 200 || contextLength > 10 || hasTechnicalTerms) {
+      return 'complex';
+    } else {
+      return 'moderate';
+    }
+  }
+
+  private determineUrgency(message: string, context: ConversationContext): 'low' | 'normal' | 'high' {
+    const urgentKeywords = /\b(urgent|emergency|asap|immediately|critical|down|outage|broken|not working)\b/i;
+    const highPriorityContext = context.currentIntent === 'escalation' || context.escalationRequested;
+
+    if (urgentKeywords.test(message) || highPriorityContext) {
+      return 'high';
+    } else if (context.customerInfo?.previousIssues && context.customerInfo.previousIssues.length > 5) {
+      return 'normal'; // Experienced customer, might need quicker response
+    } else {
+      return 'low';
+    }
+  }
+
+  private async determineCustomerTier(context: ConversationContext): Promise<'standard' | 'premium' | 'enterprise'> {
+    if (!context.customerInfo) return 'standard';
+
+    // This would typically query your CRM or customer database
+    // For now, we'll use a simple heuristic based on available data
+    if (context.customerInfo.previousIssues && context.customerInfo.previousIssues.length > 10) {
+      return 'enterprise';
+    } else if (context.customerInfo.email && context.customerInfo.email.includes('enterprise')) {
+      return 'enterprise';
+    } else {
+      return 'standard';
+    }
+  }
+
+  private requiresAdvancedReasoning(message: string): boolean {
+    const reasoningKeywords = /\b(why|how|explain|analyze|compare|evaluate|reason|logic|cause|effect)\b/i;
+    return reasoningKeywords.test(message) || message.length > 300;
+  }
+
+  private requiresCreativity(message: string): boolean {
+    const creativeKeywords = /\b(create|design|generate|imagine|brainstorm|idea|concept|innovate)\b/i;
+    return creativeKeywords.test(message);
   }
 
   /**

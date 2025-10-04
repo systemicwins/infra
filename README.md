@@ -1,7 +1,11 @@
 # 🤖 AI-Powered Business Infrastructure
 
-A comprehensive customer support system built on Google Cloud Platform with AI-powered conversational agents, multi-channel communication, and automated infrastructure provisioning. Note that this system is fairly complex and getting even moreso but
-it's an ambitious infrastructure design intended to be a good starting point for nearly any business acquisition in any vertical.
+A comprehensive customer support system built on Google Cloud Platform 
+with AI-powered conversational agents, multi-channel communication, and 
+automated infrastructure provisioning. Note that this system is fairly 
+complex and getting even moreso but it's an ambitious infrastructure 
+design intended to be a good starting point for nearly any business 
+acquisition in any vertical.
 
 ## 📋 Table of Contents
 
