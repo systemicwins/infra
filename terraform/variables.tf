@@ -109,3 +109,9 @@ variable "mailchimp_list_id" {
   default     = ""
 }
 
+variable "admin_db_password" {
+  description = "Admin database password for PostgreSQL"
+  type        = string
+  sensitive   = true
+}
+

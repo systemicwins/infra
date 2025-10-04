@@ -80,6 +80,47 @@ resource "google_firestore_database" "main" {
   app_engine_integration_mode = "DISABLED"
 }
 
+# Cloud SQL PostgreSQL for Admin Authentication
+resource "google_sql_database_instance" "admin_db" {
+  name             = "${var.environment}-admin-postgres"
+  database_version = "POSTGRES_15"
+  region           = var.region
+
+  settings {
+    tier = "db-f1-micro"
+    disk_size = 10
+
+    database_flags {
+      name  = "max_connections"
+      value = "50"
+    }
+
+    ip_configuration {
+      ipv4_enabled = false
+      private_network = google_compute_network.main.id
+    }
+
+    backup_configuration {
+      enabled = true
+    }
+  }
+
+  deletion_protection = false
+}
+
+# Admin Database
+resource "google_sql_database" "admin" {
+  name     = "admin"
+  instance = google_sql_database_instance.admin_db.name
+}
+
+# Admin Database User
+resource "google_sql_user" "admin" {
+  name     = "admin_user"
+  instance = google_sql_database_instance.admin_db.name
+  password = var.admin_db_password
+}
+
 
 
 
@@ -157,12 +198,75 @@ resource "google_cloud_run_service" "ai_agent" {
   depends_on = [google_secret_manager_secret_iam_member.ai_agent_secret_accessor]
 }
 
+# Cloud Run Service for Admin Interface
+resource "google_cloud_run_service" "admin" {
+  name     = "${var.environment}-admin"
+  location = var.region
+
+  template {
+    spec {
+      service_account_name = google_service_account.cloud_run_sa.email
+      containers {
+        image = "gcr.io/${var.project_id}/${var.environment}-admin:latest"
+        ports {
+          container_port = 80
+        }
+        env {
+          name  = "ADMIN_DB_HOST"
+          value = google_sql_database_instance.admin_db.private_ip_address
+        }
+        env {
+          name  = "ADMIN_DB_PORT"
+          value = "5432"
+        }
+        env {
+          name  = "ADMIN_DB_NAME"
+          value = google_sql_database.admin.name
+        }
+        env {
+          name  = "ADMIN_DB_USER"
+          value = google_sql_user.admin.name
+        }
+        env {
+          name  = "ADMIN_DB_PASSWORD"
+          value_from {
+            secret_key_ref {
+              name = google_secret_manager_secret.admin_db_password.secret_id
+              key  = "latest"
+            }
+          }
+        }
+        env {
+          name  = "FIRESTORE_PROJECT_ID"
+          value = var.project_id
+        }
+      }
+    }
+  }
+
+  traffic {
+    percent         = 100
+    latest_revision = true
+  }
+
+  depends_on = [google_secret_manager_secret_iam_member.admin_secret_accessor]
+}
+
 
 # IAM policy for AI Agent Cloud Run
 resource "google_cloud_run_service_iam_policy" "ai_agent_noauth" {
   location = google_cloud_run_service.ai_agent.location
   project  = google_cloud_run_service.ai_agent.project
   service  = google_cloud_run_service.ai_agent.name
+
+  policy_data = data.google_iam_policy.noauth.policy_data
+}
+
+# IAM policy for Admin Cloud Run
+resource "google_cloud_run_service_iam_policy" "admin_noauth" {
+  location = google_cloud_run_service.admin.location
+  project  = google_cloud_run_service.admin.project
+  service  = google_cloud_run_service.admin.name
 
   policy_data = data.google_iam_policy.noauth.policy_data
 }
@@ -266,6 +370,13 @@ resource "google_secret_manager_secret" "mailchimp_list_id" {
   }
 }
 
+resource "google_secret_manager_secret" "admin_db_password" {
+  secret_id = "${var.environment}-admin-db-password"
+  replication {
+    auto {}
+  }
+}
+
 
 resource "google_secret_manager_secret_version" "openai_api_key" {
   secret      = google_secret_manager_secret.openai_api_key.name
@@ -326,6 +437,11 @@ resource "google_secret_manager_secret_version" "mailchimp_server_prefix" {
 resource "google_secret_manager_secret_version" "mailchimp_list_id" {
   secret      = google_secret_manager_secret.mailchimp_list_id.name
   secret_data = var.mailchimp_list_id
+}
+
+resource "google_secret_manager_secret_version" "admin_db_password" {
+  secret      = google_secret_manager_secret.admin_db_password.name
+  secret_data = var.admin_db_password
 }
 
 
@@ -403,12 +519,25 @@ resource "google_secret_manager_secret_iam_member" "mailchimp_list_id_accessor" 
   member    = "serviceAccount:${google_service_account.cloud_run_sa.email}"
 }
 
+resource "google_secret_manager_secret_iam_member" "admin_secret_accessor" {
+  secret_id = google_secret_manager_secret.admin_db_password.secret_id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.cloud_run_sa.email}"
+}
+
 
 
 # Vertex AI IAM permissions for Gemini 2.5 Flash
 resource "google_project_iam_member" "vertex_ai_user" {
   project = var.project_id
   role    = "roles/aiplatform.user"
+  member  = "serviceAccount:${google_service_account.cloud_run_sa.email}"
+}
+
+# Cloud SQL IAM permissions for Admin
+resource "google_project_iam_member" "admin_cloud_sql" {
+  project = var.project_id
+  role    = "roles/cloudsql.client"
   member  = "serviceAccount:${google_service_account.cloud_run_sa.email}"
 }
 
@@ -445,6 +574,17 @@ resource "google_compute_backend_service" "ai_agent_backend" {
   health_checks = [google_compute_health_check.default.id]
 }
 
+resource "google_compute_backend_service" "admin_backend" {
+  name      = "${var.environment}-admin-backend"
+  protocol  = "HTTP"
+
+  backend {
+    group = google_compute_region_network_endpoint_group.admin_neg.id
+  }
+
+  health_checks = [google_compute_health_check.default.id]
+}
+
 
 
 resource "google_compute_region_network_endpoint_group" "ai_agent_neg" {
@@ -453,6 +593,15 @@ resource "google_compute_region_network_endpoint_group" "ai_agent_neg" {
   region                = var.region
   cloud_run {
     service = google_cloud_run_service.ai_agent.name
+  }
+}
+
+resource "google_compute_region_network_endpoint_group" "admin_neg" {
+  name                  = "${var.environment}-admin-neg"
+  network_endpoint_type = "SERVERLESS"
+  region                = var.region
+  cloud_run {
+    service = google_cloud_run_service.admin.name
   }
 }
 
@@ -473,7 +622,7 @@ resource "google_compute_managed_ssl_certificate" "default" {
   name = "${var.environment}-ssl-cert"
 
   managed {
-    domains = [var.domain_name]
+    domains = [var.domain_name, "admin.${var.domain_name}"]
   }
 }
 
@@ -483,8 +632,18 @@ resource "google_compute_url_map" "default" {
   default_service = google_compute_backend_service.ai_agent_backend.id
 
   host_rule {
+    hosts        = ["admin.${var.domain_name}"]
+    path_matcher = "admin"
+  }
+
+  host_rule {
     hosts        = [var.domain_name]
     path_matcher = "main"
+  }
+
+  path_matcher {
+    name            = "admin"
+    default_service = google_compute_backend_service.admin_backend.id
   }
 
   path_matcher {

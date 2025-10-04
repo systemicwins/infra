@@ -18,6 +18,23 @@ services:
     networks:
       - business-network
 
+  # Admin Interface Development
+  admin:
+    build:
+      context: ./admin
+      dockerfile: Dockerfile.dev
+    ports:
+      - "5174:5174"
+    volumes:
+      - ./admin:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+    depends_on:
+      - backend
+    networks:
+      - business-network
+
   # Backend Development
   backend:
     build:
@@ -36,6 +53,12 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID}
       - TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN}
+      - ADMIN_DB_HOST=postgres
+      - ADMIN_DB_PORT=5432
+      - ADMIN_DB_NAME=admin
+      - ADMIN_DB_USER=admin_user
+      - ADMIN_DB_PASSWORD=admin_password
+      - JWT_SECRET=development-jwt-secret-change-in-production
     depends_on:
       - firestore-emulator
     networks:
@@ -47,6 +70,20 @@ services:
     ports:
       - "8081:8080"
     command: gcloud emulators firestore start --host-port=0.0.0.0:8080
+    networks:
+      - business-network
+
+  # PostgreSQL for Admin Authentication
+  postgres:
+    image: postgres:15-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=admin
+      - POSTGRES_USER=admin_user
+      - POSTGRES_PASSWORD=admin_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
     networks:
       - business-network
 
@@ -77,6 +114,7 @@ services:
 
 volumes:
   redis_data:
+  postgres_data:
 
 networks:
   business-network:

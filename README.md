@@ -1520,6 +1520,11 @@ For support and questions:
 - **Email**: support@yourbusiness.com *(Customers)*
 - **Web**: Submit support ticket through the platform *(Customers)*
 - **CRM API**: Firebase CRM - Customer management and case tracking *(Programmatic access)*
+- **Admin Dashboard**: admin.yourbusiness.com - Business management and analytics *(Administrators)*
+  - Real-time order and ticket monitoring
+  - Customer lifetime value analytics
+  - Business intelligence dashboard
+  - Admin user authentication via PostgreSQL
 
 ---
 

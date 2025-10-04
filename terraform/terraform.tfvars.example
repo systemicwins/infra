@@ -31,6 +31,9 @@ mailchimp_api_key = "your-mailchimp-api-key"
 mailchimp_server_prefix = "us1"  # e.g., "us1", "us2", etc.
 mailchimp_list_id = "your-mailchimp-audience-id"
 
+# Admin Database Configuration
+admin_db_password = "your-secure-admin-db-password"
+
 
 # Note: To enable email support, you need to:
 # 1. Create a SendGrid account at sendgrid.com

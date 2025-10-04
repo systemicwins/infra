@@ -13,6 +13,11 @@ output "cloud_run_service_url" {
   value       = google_cloud_run_service.ai_agent.status[0].url
 }
 
+output "admin_service_url" {
+  description = "URL of the Cloud Run admin service"
+  value       = google_cloud_run_service.admin.status[0].url
+}
+
 output "frontend_bucket_name" {
   description = "Name of the storage bucket for frontend assets"
   value       = google_storage_bucket.frontend_assets.name
