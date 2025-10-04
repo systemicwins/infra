@@ -6,7 +6,10 @@ export interface ModelConfig {
   name: string;
   provider: 'vertex' | 'openai';
   modelId: string;
-  costPer1kTokens: number;
+  pricing: {
+    inputCostPer1kTokens: number;
+    outputCostPer1kTokens: number;
+  };
   contextWindow: number;
   strengths: string[];
   maxTokens?: number;
@@ -42,7 +45,10 @@ export class ModelSelectionService {
       name: 'Gemini 1.5 Flash',
       provider: 'vertex',
       modelId: 'gemini-1.5-flash',
-      costPer1kTokens: 0.075, // $0.075 per 1k tokens
+      pricing: {
+        inputCostPer1kTokens: 0.075, // $0.075 per 1k input tokens
+        outputCostPer1kTokens: 0.30  // $0.30 per 1k output tokens
+      },
       contextWindow: 1048576,
       strengths: ['fast', 'efficient', 'good_for_simple'],
       maxTokens: 8192,
@@ -53,7 +59,10 @@ export class ModelSelectionService {
       name: 'Claude 3.5 Haiku',
       provider: 'vertex',
       modelId: 'claude-3-5-haiku',
-      costPer1kTokens: 0.25, // $0.25 per 1k tokens input, $1.25 output
+      pricing: {
+        inputCostPer1kTokens: 0.25, // $0.25 per 1k input tokens
+        outputCostPer1kTokens: 1.25  // $1.25 per 1k output tokens
+      },
       contextWindow: 200000,
       strengths: ['fast', 'efficient', 'good_for_simple', 'quick_responses'],
       maxTokens: 8192,
@@ -64,7 +73,10 @@ export class ModelSelectionService {
       name: 'Gemini 2.5 Flash',
       provider: 'vertex',
       modelId: 'gemini-2.5-flash',
-      costPer1kTokens: 0.15, // $0.15 per 1k tokens (estimated)
+      pricing: {
+        inputCostPer1kTokens: 0.15, // $0.15 per 1k input tokens
+        outputCostPer1kTokens: 0.60  // $0.60 per 1k output tokens
+      },
       contextWindow: 1048576,
       strengths: ['balanced', 'good_for_moderate', 'multimodal'],
       maxTokens: 8192,
@@ -75,7 +87,10 @@ export class ModelSelectionService {
       name: 'Claude 4.5 Sonnet',
       provider: 'vertex',
       modelId: 'claude-4-5-sonnet',
-      costPer1kTokens: 3.00, // $3.00 per 1k tokens input, $15.00 output
+      pricing: {
+        inputCostPer1kTokens: 3.00, // $3.00 per 1k input tokens
+        outputCostPer1kTokens: 15.00 // $15.00 per 1k output tokens
+      },
       contextWindow: 200000,
       strengths: ['balanced', 'good_for_moderate', 'creative', 'coding', 'latest'],
       maxTokens: 8192,
@@ -86,7 +101,10 @@ export class ModelSelectionService {
       name: 'Claude 3.5 Sonnet',
       provider: 'vertex',
       modelId: 'claude-3-5-sonnet',
-      costPer1kTokens: 3.00, // $3.00 per 1k tokens input, $15.00 output
+      pricing: {
+        inputCostPer1kTokens: 3.00, // $3.00 per 1k input tokens
+        outputCostPer1kTokens: 15.00 // $15.00 per 1k output tokens
+      },
       contextWindow: 200000,
       strengths: ['balanced', 'good_for_moderate', 'creative', 'coding'],
       maxTokens: 8192,
@@ -97,7 +115,10 @@ export class ModelSelectionService {
       name: 'Claude 3 Haiku',
       provider: 'vertex',
       modelId: 'claude-3-haiku',
-      costPer1kTokens: 0.25, // $0.25 per 1k tokens input, $1.25 output
+      pricing: {
+        inputCostPer1kTokens: 0.25, // $0.25 per 1k input tokens
+        outputCostPer1kTokens: 1.25  // $1.25 per 1k output tokens
+      },
       contextWindow: 200000,
       strengths: ['fast', 'efficient', 'good_for_simple'],
       maxTokens: 4096,
@@ -107,7 +128,10 @@ export class ModelSelectionService {
       name: 'Claude 3 Sonnet',
       provider: 'vertex',
       modelId: 'claude-3-sonnet',
-      costPer1kTokens: 3.00, // $3.00 per 1k tokens input, $15.00 output
+      pricing: {
+        inputCostPer1kTokens: 3.00, // $3.00 per 1k input tokens
+        outputCostPer1kTokens: 15.00 // $15.00 per 1k output tokens
+      },
       contextWindow: 200000,
       strengths: ['balanced', 'good_for_moderate', 'creative'],
       maxTokens: 4096,
@@ -118,7 +142,10 @@ export class ModelSelectionService {
       name: 'Claude Instant 1.2',
       provider: 'vertex',
       modelId: 'claude-instant-1.2',
-      costPer1kTokens: 0.80, // $0.80 per 1k tokens input, $2.40 output (estimated)
+      pricing: {
+        inputCostPer1kTokens: 0.80, // $0.80 per 1k input tokens
+        outputCostPer1kTokens: 2.40  // $2.40 per 1k output tokens
+      },
       contextWindow: 100000,
       strengths: ['fast', 'efficient', 'legacy_support'],
       maxTokens: 4096,
@@ -129,7 +156,10 @@ export class ModelSelectionService {
       name: 'Claude Opus 4.1',
       provider: 'vertex',
       modelId: 'claude-opus-4.1',
-      costPer1kTokens: 15.00, // $15.00 per 1k tokens input, $75.00 output
+      pricing: {
+        inputCostPer1kTokens: 15.00, // $15.00 per 1k input tokens
+        outputCostPer1kTokens: 75.00  // $75.00 per 1k output tokens
+      },
       contextWindow: 200000,
       strengths: ['complex_reasoning', 'creative', 'nuanced_understanding', 'multilingual', 'latest_premium'],
       maxTokens: 4096,
@@ -139,7 +169,10 @@ export class ModelSelectionService {
       name: 'Gemini 1.5 Pro',
       provider: 'vertex',
       modelId: 'gemini-1.5-pro',
-      costPer1kTokens: 1.25, // $1.25 per 1k tokens
+      pricing: {
+        inputCostPer1kTokens: 1.25, // $1.25 per 1k input tokens
+        outputCostPer1kTokens: 5.00  // $5.00 per 1k output tokens
+      },
       contextWindow: 2097152,
       strengths: ['complex_reasoning', 'large_context', 'high_accuracy'],
       maxTokens: 32768,
@@ -149,7 +182,10 @@ export class ModelSelectionService {
       name: 'Claude 3 Opus',
       provider: 'vertex',
       modelId: 'claude-3-opus',
-      costPer1kTokens: 15.00, // $15.00 per 1k tokens input, $75.00 output
+      pricing: {
+        inputCostPer1kTokens: 15.00, // $15.00 per 1k input tokens
+        outputCostPer1kTokens: 75.00  // $75.00 per 1k output tokens
+      },
       contextWindow: 200000,
       strengths: ['complex_reasoning', 'creative', 'nuanced_understanding', 'multilingual'],
       maxTokens: 4096,
@@ -159,7 +195,10 @@ export class ModelSelectionService {
       name: 'GPT-4o',
       provider: 'openai',
       modelId: 'gpt-4o',
-      costPer1kTokens: 5.00, // $5.00 per 1k tokens input, $15.00 output
+      pricing: {
+        inputCostPer1kTokens: 5.00, // $5.00 per 1k input tokens
+        outputCostPer1kTokens: 15.00 // $15.00 per 1k output tokens
+      },
       contextWindow: 128000,
       strengths: ['creative', 'nuanced_understanding', 'good_for_creative'],
       maxTokens: 16384,
@@ -169,18 +208,24 @@ export class ModelSelectionService {
       name: 'GPT-4o-mini',
       provider: 'openai',
       modelId: 'gpt-4o-mini',
-      costPer1kTokens: 0.15, // $0.15 per 1k tokens
+      pricing: {
+        inputCostPer1kTokens: 0.15, // $0.15 per 1k input tokens
+        outputCostPer1kTokens: 0.60  // $0.60 per 1k output tokens
+      },
       contextWindow: 128000,
       strengths: ['fast', 'efficient', 'good_for_simple'],
       maxTokens: 16384,
       temperature: 0.7
     },
-    // xAI Grok models
+    // xAI Grok models (estimated pricing - xAI doesn't publish exact pricing)
     {
       name: 'Grok-2',
       provider: 'vertex',
       modelId: 'grok-2',
-      costPer1kTokens: 2.00, // $2.00 per 1k tokens input, $10.00 output (estimated)
+      pricing: {
+        inputCostPer1kTokens: 2.00, // Estimated: $2.00 per 1k input tokens
+        outputCostPer1kTokens: 10.00 // Estimated: $10.00 per 1k output tokens
+      },
       contextWindow: 128000,
       strengths: ['creative', 'helpful', 'maximal_truth', 'real_time'],
       maxTokens: 4096,
@@ -190,7 +235,10 @@ export class ModelSelectionService {
       name: 'Grok-1.5',
       provider: 'vertex',
       modelId: 'grok-1.5',
-      costPer1kTokens: 1.00, // $1.00 per 1k tokens input, $5.00 output (estimated)
+      pricing: {
+        inputCostPer1kTokens: 1.00, // Estimated: $1.00 per 1k input tokens
+        outputCostPer1kTokens: 5.00  // Estimated: $5.00 per 1k output tokens
+      },
       contextWindow: 128000,
       strengths: ['balanced', 'helpful', 'real_time'],
       maxTokens: 4096,
@@ -200,7 +248,10 @@ export class ModelSelectionService {
       name: 'Grok-1',
       provider: 'vertex',
       modelId: 'grok-1',
-      costPer1kTokens: 0.50, // $0.50 per 1k tokens input, $2.50 output (estimated)
+      pricing: {
+        inputCostPer1kTokens: 0.50, // Estimated: $0.50 per 1k input tokens
+        outputCostPer1kTokens: 2.50  // Estimated: $2.50 per 1k output tokens
+      },
       contextWindow: 8192,
       strengths: ['fast', 'efficient', 'helpful'],
       maxTokens: 2048,
@@ -268,10 +319,10 @@ export class ModelSelectionService {
     }).filter(model => {
       // Filter by customer tier requirements
       if (criteria.customerTier === 'enterprise') {
-        return model.costPer1kTokens >= 0.5; // Premium models for enterprise
+        return model.pricing.inputCostPer1kTokens >= 0.5; // Premium models for enterprise
       }
       if (criteria.customerTier === 'premium') {
-        return model.costPer1kTokens >= 0.1; // Mid-tier models for premium
+        return model.pricing.inputCostPer1kTokens >= 0.1; // Mid-tier models for premium
       }
       return true;
     }).filter(model => {
@@ -292,14 +343,17 @@ export class ModelSelectionService {
       let fallback: ModelConfig;
       if (this.models.length > 0) {
         fallback = this.models.reduce((cheapest, current) =>
-          current.costPer1kTokens < cheapest.costPer1kTokens ? current : cheapest
+          current.pricing.inputCostPer1kTokens < cheapest.pricing.inputCostPer1kTokens ? current : cheapest
         );
       } else {
         fallback = {
           name: 'Gemini 1.5 Flash',
           provider: 'vertex' as const,
           modelId: 'gemini-1.5-flash',
-          costPer1kTokens: 0.075,
+          pricing: {
+            inputCostPer1kTokens: 0.075,
+            outputCostPer1kTokens: 0.30
+          },
           contextWindow: 1048576,
           strengths: ['fast', 'efficient', 'good_for_simple'],
           maxTokens: 8192,
@@ -340,7 +394,10 @@ export class ModelSelectionService {
           name: 'Gemini 1.5 Flash',
           provider: 'vertex' as const,
           modelId: 'gemini-1.5-flash',
-          costPer1kTokens: 0.075,
+          pricing: {
+            inputCostPer1kTokens: 0.075,
+            outputCostPer1kTokens: 0.30
+          },
           contextWindow: 1048576,
           strengths: ['fast', 'efficient', 'good_for_simple'],
           maxTokens: 8192,
@@ -372,23 +429,30 @@ export class ModelSelectionService {
 
     // Urgency matching
     if (criteria.urgency === 'high' && model.strengths.includes('fast')) score += 0.2;
-    if (criteria.urgency === 'low' && model.costPer1kTokens < 0.5) score += 0.1;
+    if (criteria.urgency === 'low' && model.pricing.inputCostPer1kTokens < 0.5) score += 0.1;
 
     // Context length efficiency
     if (model.contextWindow > criteria.contextLength * 2) score += 0.1;
 
     // Customer tier alignment
-    if (criteria.customerTier === 'enterprise' && model.costPer1kTokens > 1.0) score += 0.2;
-    if (criteria.customerTier === 'standard' && model.costPer1kTokens < 0.2) score += 0.1;
+    if (criteria.customerTier === 'enterprise' && model.pricing.inputCostPer1kTokens > 1.0) score += 0.2;
+    if (criteria.customerTier === 'standard' && model.pricing.inputCostPer1kTokens < 0.2) score += 0.1;
 
     return Math.min(score, 1.0); // Cap at 1.0
   }
 
   /**
-   * Calculate estimated cost for token usage
+   * Calculate estimated cost for token usage (with input/output differentiation)
    */
-  private calculateCost(model: ModelConfig, tokens: number): number {
-    return (model.costPer1kTokens * tokens) / 1000;
+  private calculateCost(model: ModelConfig, tokens: number, inputRatio: number = 0.6): number {
+    // Estimate input vs output token distribution (default 60% input, 40% output)
+    const inputTokens = tokens * inputRatio;
+    const outputTokens = tokens * (1 - inputRatio);
+
+    const inputCost = (model.pricing.inputCostPer1kTokens * inputTokens) / 1000;
+    const outputCost = (model.pricing.outputCostPer1kTokens * outputTokens) / 1000;
+
+    return inputCost + outputCost;
   }
 
   /**

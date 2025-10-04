@@ -2,7 +2,6 @@ import { VertexAI } from '@google-cloud/aiplatform';
 import { TextToSpeechClient } from '@google-cloud/text-to-speech';
 import { SpeechToTextClient } from '@google-cloud/speech';
 import { Firestore } from '@google-cloud/firestore';
-import { gmail } from '@google-cloud/gmail';
 import OpenAI from 'openai';
 import { logger } from '../utils/logger.js';
 import { SuiteCRMMCPServer } from './SuiteCRMMCP.js';
